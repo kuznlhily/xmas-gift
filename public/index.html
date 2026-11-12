@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>🎄 微信群圣诞礼物大抽奖 🎁</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Canvas Snow Animation -->
+  <canvas id="snow-canvas"></canvas>
+
+  <div id="app" v-cloak>
+    <!-- Top Live Ticker Marquee -->
+    <div v-if="history.length > 0" class="marquee-bar">
+      <span>📢</span>
+      <div class="marquee-content">
+        <div class="marquee-text">
+          <span v-for="(h, i) in history" :key="i" style="margin-right: 28px;">
+            🎉 恭喜【{{ h.name }}】抽中 @{{ h.provider }} 的 <strong>{{ h.icon }} {{ h.giftName }}</strong> ({{ h.value }})！
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="app-container">
+      <!-- Header -->
+      <header class="hero-header">
+        <h1 class="hero-title">
+          <span>🎄</span>
+          <span>{{ config.title }}</span>
+          <span>🎁</span>
+        </h1>
+        <div class="budget-pill">
+          <span>💰 礼物预算标准：</span>
+          <span style="color: #fbbf24; font-size: 14px;">{{ config.budget }}</span>
+          <span style="opacity: 0.85;">(群友自备 · 纯随机抽)</span>
+        </div>
+      </header>
+
+      <!-- PHASE 1: COLLECTING GIFTS (收集礼物阶段) -->
+      <section v-if="config.status === 'collecting'" class="slot-machine-card" style="border-color: #38bdf8;">
+        <div style="text-align: center; margin-bottom: 16px;">
+          <div style="display: inline-block; background: rgba(56, 189, 248, 0.2); border: 1px solid #38bdf8; color: #38bdf8; border-radius: 20px; padding: 4px 14px; font-size: 12px; font-weight: 800; margin-bottom: 8px;">
+            🟡 阶段一：群友礼物征集中
+          </div>
+          <h2 style="font-size: 20px; font-weight: 900; color: #fff9e6;">
+            已收集到 <span style="color: #fbbf24; font-size: 26px;">{{ stats.totalGifts }}</span> 份群友礼物！
+          </h2>
+          <p style="font-size: 12px; color: #cbd5e1; margin-top: 4px;">
+            每个人买一份50~70元礼物入池，等大家到齐后房主封池开奖！
+          </p>
+        </div>
+
+        <!-- Nickname Input -->
+        <div class="user-select-box">
+          <label class="user-select-label">👤 你的微信群昵称：</label>
+          <input 
+            v-model="currentName" 
+            type="text" 
+            class="user-input" 
+            placeholder="输入你的名字（方便大家认出你）"
+            @input="onNameChange"
+            maxlength="15"
+          >
+        </div>
+
+        <!-- If current user already submitted a gift -->
+        <div v-if="mySubmittedGift" style="background: rgba(34, 197, 94, 0.2); border: 1px solid #4ade80; border-radius: 14px; padding: 12px; margin-bottom: 14px; text-align: center;">
+          <div style="font-size: 13px; color: #4ade80; font-weight: 700;">
+            ✅ 你已成功登记礼物进池：
+          </div>
+          <div style="font-size: 18px; font-weight: 900; color: #fff; margin: 6px 0;">
+            {{ mySubmittedGift.icon }} {{ mySubmittedGift.name }} ({{ mySubmittedGift.value }})
+          </div>
+          <button 
+            style="background: transparent; border: none; color: #fbbf24; font-size: 12px; text-decoration: underline; cursor: pointer;"
+            @click="openSubmitModal"
+          >
+            ✏️ 点击修改我登记的礼物
+          </button>
+        </div>
+
+        <!-- Big Button: Submit Gift -->
+        <button v-else class="btn-pull-lever" style="background: linear-gradient(135deg, #15803d 0%, #166534 100%);" @click="openSubmitModal">
+          <span>🎁</span>
+          <span>登记我买的礼物 (¥50~70)</span>
+          <span>✨</span>
+        </button>
+      </section>
+
+      <!-- PHASE 2: ROLLING (封池开奖阶段 - 老虎机) -->
+      <section v-else class="slot-machine-card">
+        <!-- Neon Blinking Lights -->
+        <div class="neon-dots">
+          <div class="neon-dot dot-red"></div>
+          <div class="neon-dot dot-gold"></div>
+          <div class="neon-dot dot-green"></div>
+          <div class="neon-dot dot-red"></div>
+          <div class="neon-dot dot-gold"></div>
+          <div class="neon-dot dot-green"></div>
+        </div>
+
+        <!-- If user already won a gift -->
+        <div v-if="myPrize" class="my-prize-banner">
+          <div style="font-size: 12px; font-weight: 800; color: #b45309; margin-bottom: 6px;">
+            🏆 你的专属抽奖战报
+          </div>
+          <div style="font-size: 46px; margin: 4px 0;">{{ myPrize.icon }}</div>
+          <div style="font-size: 18px; font-weight: 900; color: #991b1b; margin-bottom: 4px;">
+            {{ myPrize.name }}
+          </div>
+          <div style="font-size: 13px; color: #64748b; margin-bottom: 12px;">
+            估值：<strong style="color: #b45309;">{{ myPrize.value }}</strong> | 由【@{{ myPrize.provider }}】用心准备提供
+          </div>
+          <button class="btn-pull-lever" style="font-size: 15px; padding: 10px;" @click="generatePoster">
+            📸 生成战报海报发群炫耀
+          </button>
+        </div>
+
+        <!-- Normal Roll Flow -->
+        <div v-else>
+          <!-- Select Name -->
+          <div class="user-select-box">
+            <label class="user-select-label">👤 请输入你的群昵称：</label>
+            <input 
+              v-model="currentName" 
+              type="text" 
+              class="user-input" 
+              placeholder="输入你的群昵称开始抽取"
+              @input="onNameChange"
+              maxlength="15"
+            >
+          </div>
+
+          <!-- Slot Machine Screen -->
+          <div class="slot-screen">
+            <div class="slot-item-display" :class="{ spinning: isSpinning }">
+              <div class="slot-item-icon">{{ displaySlotItem.icon || '🎁' }}</div>
+              <div class="slot-item-name">{{ displaySlotItem.name }}</div>
+              <div class="slot-item-val" v-if="displaySlotItem.value">{{ displaySlotItem.value }}</div>
+            </div>
+          </div>
+
+          <!-- PULL BUTTON -->
+          <button 
+            class="btn-pull-lever" 
+            :disabled="isSpinning || stats.remainingGifts === 0"
+            @click="startRoll"
+          >
+            <span>🕹️</span>
+            <span>{{ isSpinning ? '疯狂摇奖中...' : (stats.remainingGifts === 0 ? '礼物池已被抢空' : 'PULL! 摇出属于我的圣诞好礼') }}</span>
+            <span>✨</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ================= 🎁 公开圣诞礼物池展示 ================= -->
+      <section style="margin-bottom: 24px;">
+        <div class="pool-section-header">
+          <div class="pool-title">
+            <span>🎁 群友自报公开礼物池 ({{ gifts.length }}份)</span>
+          </div>
+          <button 
+            style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 20px; padding: 4px 10px; font-size: 12px; cursor: pointer;"
+            @click="showQrModal = true"
+          >
+            📱 邀请群友
+          </button>
+        </div>
+
+        <div v-if="gifts.length === 0" style="background: rgba(0,0,0,0.3); border-radius: 14px; padding: 24px; text-align: center; color: #94a3b8; font-size: 13px;">
+          暂无群友提交礼物，点击上方按钮成为第一个入池的小伙伴吧！🎄
+        </div>
+
+        <div v-else class="gift-cards-grid">
+          <div 
+            v-for="g in gifts" 
+            :key="g.id" 
+            class="gift-card"
+            :class="{ won: g.winner }"
+          >
+            <div class="gift-card-icon">{{ g.icon }}</div>
+            <div class="gift-card-name">{{ g.name }}</div>
+            <div style="font-size: 11px; color: #38bdf8; margin-bottom: 4px;">
+              由 @{{ g.provider }} 带来
+            </div>
+            <div class="gift-card-footer">
+              <span class="gift-val">{{ g.value }}</span>
+              <span v-if="g.winner" class="gift-status-tag tag-won">
+                @{{ g.winner.name }} 抽走
+              </span>
+              <span v-else class="gift-status-tag tag-available">
+                ✨ 待抽取
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Rules Hint -->
+      <div style="background: rgba(0,0,0,0.3); border-radius: 14px; padding: 12px 14px; font-size: 12px; color: #94a3b8; line-height: 1.6;">
+        💡 <strong>规则保证：</strong>
+        群友自主登记礼物，全员到齐后封池。系统算法严格保证<strong>绝对不会抽到自己带来的礼物</strong>！完全随机，人人有份！
+      </div>
+
+      <!-- Footer Admin Link -->
+      <footer class="footer-admin">
+        <a href="/admin">⚙️ 房主控制台 (封池开奖入口)</a>
+      </footer>
+    </div>
+
+    <!-- ================= 🎁 SUBMIT GIFT MODAL ================= -->
+    <div v-if="showSubmitModal" class="modal-overlay" @click.self="showSubmitModal = false">
+      <div class="winner-modal-card" style="text-align: left; max-width: 400px;">
+        <h3 style="font-size: 18px; color: #fbbf24; text-align: center; margin-bottom: 16px;">
+          🎁 登记你的自选礼物进池
+        </h3>
+
+        <div class="user-select-box">
+          <label class="user-select-label">你的微信群昵称 *</label>
+          <input v-model="currentName" type="text" class="user-input" placeholder="如：阿杰、小美" maxlength="15">
+        </div>
+
+        <div class="user-select-box">
+          <label class="user-select-label">礼物名称 *</label>
+          <input v-model="submitForm.name" type="text" class="user-input" placeholder="如：🔥 智能发热围巾、复古小音响" maxlength="25">
+        </div>
+
+        <div class="user-select-box">
+          <label class="user-select-label">礼物买入价格 (建议 50~70元)</label>
+          <input v-model="submitForm.price" type="text" class="user-input" placeholder="如：¥68">
+        </div>
+
+        <div class="user-select-box">
+          <label class="user-select-label">挑选一个可爱的礼物图标：</label>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <span 
+              v-for="ic in iconList" 
+              :key="ic"
+              style="font-size: 24px; padding: 6px; border-radius: 10px; cursor: pointer; background: rgba(255,255,255,0.08); transition: transform 0.1s;"
+              :style="{ background: submitForm.icon === ic ? '#f59e0b' : 'rgba(255,255,255,0.08)' }"
+              @click="submitForm.icon = ic"
+            >
+              {{ ic }}
+            </span>
+          </div>
+        </div>
+
+        <button class="btn-pull-lever" style="margin-top: 10px; padding: 12px;" @click="submitMyGift">
+          <span>✨ 确认提交进礼物池</span>
+        </button>
+        <button class="btn-secondary" @click="showSubmitModal = false">
+          取消
+        </button>
+      </div>
+    </div>
+
+    <!-- ================= 🏆 WINNER POPUP MODAL ================= -->
+    <div v-if="showWinnerModal" class="modal-overlay" @click.self="showWinnerModal = false">
+      <div class="winner-modal-card">
+        <div class="winner-badge">🎉 欧 气 大 爆 发 🎉</div>
+        <div style="font-size: 15px; color: #cbd5e1;">恭喜欧皇【{{ currentName }}】斩获</div>
+        
+        <div class="winner-gift-icon">{{ winningGift?.icon }}</div>
+        <div class="winner-gift-title">{{ winningGift?.name }}</div>
+        <div class="winner-gift-value">{{ winningGift?.value }}</div>
+        
+        <div style="font-size: 13px; color: #38bdf8; margin-bottom: 18px; font-weight: 700;">
+          由群友 @{{ winningGift?.provider }} 精心准备提供！
+        </div>
+
+        <button class="btn-pull-lever" style="padding: 12px;" @click="generatePoster">
+          <span>📸 生成朋友圈战报海报</span>
+        </button>
+        <button class="btn-secondary" @click="showWinnerModal = false">
+          收下礼物，去围观礼物池
+        </button>
+      </div>
+    </div>
+
+    <!-- ================= 📸 POSTER MODAL ================= -->
+    <div v-if="showPosterModal" class="modal-overlay" @click.self="showPosterModal = false">
+      <div class="winner-modal-card" style="max-width: 420px; padding: 20px;">
+        <h3 style="font-size: 18px; color: #fbbf24; margin-bottom: 8px;">📸 你的中奖专属战报</h3>
+        <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 12px;">长按下方图片保存，发到微信群里炫耀战绩！</p>
+        
+        <img :src="posterDataUrl" alt="中奖战报" style="width: 100%; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: block; margin-bottom: 14px;">
+
+        <button class="btn-secondary" @click="copyText(shareUrl, '链接已复制，去微信群分享吧！')">
+          📋 复制抽奖链接发群
+        </button>
+        <button class="btn-secondary" style="border: none; background: transparent; color: #94a3b8;" @click="showPosterModal = false">
+          关闭
+        </button>
+      </div>
+    </div>
+
+    <!-- ================= 📱 INVITE / QR MODAL ================= -->
+    <div v-if="showQrModal" class="modal-overlay" @click.self="showQrModal = false">
+      <div class="winner-modal-card" style="max-width: 380px;">
+        <h3 style="font-size: 18px; color: #fbbf24; margin-bottom: 8px;">📱 邀请微信群友</h3>
+        <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 14px;">微信扫一扫，或复制链接直接发进微信群！</p>
+        
+        <div style="background: #fff; padding: 10px; border-radius: 14px; display: inline-block; margin-bottom: 12px;">
+          <img v-if="qrCodeDataUrl" :src="qrCodeDataUrl" alt="二维码" style="width: 180px; height: 180px; display: block;">
+        </div>
+
+        <div style="background: rgba(0,0,0,0.4); padding: 8px; border-radius: 8px; font-size: 12px; color: #94a3b8; word-break: break-all; margin-bottom: 14px;">
+          {{ shareUrl }}
+        </div>
+
+        <button class="btn-pull-lever" style="padding: 12px;" @click="copyText(shareUrl, '活动链接已复制，快发到微信群里吧！')">
+          📋 复制链接发群
+        </button>
+        <button class="btn-secondary" @click="showQrModal = false">
+          关闭
+        </button>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div v-if="toast.show" class="toast-msg">
+      {{ toast.msg }}
+    </div>
+  </div>
+
+  <!-- Local Vue 3 and Main Script -->
+  <script src="js/vue.global.prod.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

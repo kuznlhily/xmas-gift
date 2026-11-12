@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>👑 房主后台 - 圣诞礼物池管理</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 20px 16px;
+      min-height: 100vh;
+    }
+    .admin-container { max-width: 800px; margin: 0 auto; }
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #334155;
+    }
+    .title { font-size: 22px; font-weight: 800; color: #f8b229; }
+    .card {
+      background: #1e293b;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid #334155;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #38bdf8;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .btn {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn-green { background: #16a34a; }
+    .btn-gold { background: #d97706; }
+    .btn-red { background: #dc2626; }
+    .btn-secondary { background: #475569; }
+    .input {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #475569;
+      border-radius: 8px;
+      padding: 12px;
+      color: #fff;
+      font-size: 15px;
+      margin-bottom: 12px;
+    }
+    .table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+    .table th, .table td { padding: 10px 12px; border-bottom: 1px solid #334155; text-align: left; }
+    .table th { color: #94a3b8; font-weight: 600; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+    .badge-green { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+    .badge-gold { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+  </style>
+</head>
+<body>
+  <div id="admin-app" class="admin-container" v-cloak>
+    <!-- LOGIN VIEW -->
+    <div v-if="!isAuthed" style="max-width: 360px; margin: 100px auto; text-align: center;">
+      <h2 style="font-size: 24px; color: #f8b229; margin-bottom: 8px;">👑 房主管理认证</h2>
+      <p style="color: #94a3b8; font-size: 13px; margin-bottom: 20px;">请输入房主密码进入控制台（默认：8888）</p>
+      <input v-model="adminPin" type="password" class="input" placeholder="输入密码" @keyup.enter="login">
+      <button class="btn btn-gold" style="width: 100%; padding: 12px;" @click="login">进入控制台</button>
+    </div>
+
+    <!-- MAIN DASHBOARD -->
+    <div v-else>
+      <div class="admin-header">
+        <div>
+          <div class="title">👑 圣诞抽奖管理员控制台</div>
+          <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">
+            群友主页链接：<a :href="shareUrl" target="_blank" style="color: #38bdf8;">{{ shareUrl }}</a>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <a :href="shareUrl" class="btn btn-secondary" target="_blank">前往玩家主页 ↗</a>
+          <button class="btn btn-red" @click="isAuthed = false">退出</button>
+        </div>
+      </div>
+
+      <!-- Current Phase Card -->
+      <div class="card">
+        <div class="card-title">
+          <span>⚡ 当前活动进程</span>
+          <span class="badge" :class="config.status === 'rolling' ? 'badge-green' : 'badge-gold'">
+            {{ config.status === 'rolling' ? '🟢 阶段二：抽奖进行中 (池已封存)' : '🟡 阶段一：群友自报礼物收集中' }}
+          </span>
+        </div>
+
+        <p style="font-size: 13px; color: #cbd5e1; margin-bottom: 16px; line-height: 1.6;">
+          <span v-if="config.status === 'collecting'">
+            👉 目前已有 <strong>{{ gifts.length }}</strong> 位群友登记了礼物。等大家都在微信群里报齐礼物后，点击下方绿色按钮一键封池开奖！
+          </span>
+          <span v-else>
+            👉 礼物池已锁定，群友可在微信里拉动拉杆抽取！算法严格保证<strong>绝不会抽到自己提交的那份礼物</strong>！
+          </span>
+        </p>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+          <!-- Action: Lock & Start Rolling -->
+          <button 
+            v-if="config.status === 'collecting'" 
+            class="btn btn-green" 
+            style="font-size: 15px;"
+            @click="lockAndStartRolling"
+          >
+            🔒 礼物已到齐，一键封池开启抽奖！({{ gifts.length }}份)
+          </button>
+
+          <!-- Action: Reopen collection if someone was late -->
+          <button 
+            v-if="config.status === 'rolling'" 
+            class="btn btn-gold" 
+            @click="reopenCollection"
+          >
+            🔄 重新开放收集 (允许补交/修改礼物)
+          </button>
+
+          <!-- Action: Copy WeChat Summary -->
+          <button class="btn btn-gold" @click="copyWeChatNotice">
+            📋 一键复制微信群公示总清单
+          </button>
+
+          <!-- Action: Clear All -->
+          <button class="btn btn-secondary" style="color: #ef4444;" @click="clearAll">
+            🗑️ 清空所有礼物从头开始
+          </button>
+        </div>
+      </div>
+
+      <!-- Section: Submitted Gifts by Group Members -->
+      <div class="card">
+        <div class="card-title">
+          <span>🎁 群友自报礼物池列表 (共 {{ gifts.length }} 份)</span>
+          <span style="font-size: 12px; color: #94a3b8;">已抽取: {{ wonCount }}/{{ gifts.length }}</span>
+        </div>
+
+        <div v-if="gifts.length === 0" style="color: #94a3b8; font-size: 13px; text-align: center; padding: 24px 0;">
+          暂无群友提交礼物，把主页链接发到群里，让大家登记自己的礼物吧！
+        </div>
+
+        <table v-else class="table">
+          <thead>
+            <tr>
+              <th>提交人 (群友)</th>
+              <th>礼物名称</th>
+              <th>自填价格</th>
+              <th>当前状态</th>
+              <th>中奖人 (获赠者)</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="g in gifts" :key="g.id">
+              <td style="font-weight: 700; color: #38bdf8;">@{{ g.provider }}</td>
+              <td>{{ g.icon }} {{ g.name }}</td>
+              <td style="color: #f8b229; font-weight: 600;">{{ g.value }}</td>
+              <td>
+                <span v-if="g.winner" class="badge badge-gold">已开出</span>
+                <span v-else class="badge badge-green">待抽取</span>
+              </td>
+              <td>
+                <span v-if="g.winner" style="color: #4ade80; font-weight: 700;">
+                  🎉 @{{ g.winner.name }}
+                </span>
+                <span v-else style="color: #64748b;">-</span>
+              </td>
+              <td>
+                <button style="color: #ef4444; background: none; border: none; cursor: pointer; font-size: 12px;" @click="deleteGift(g.id, g.provider, g.name)">
+                  移除
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/vue.global.prod.js"></script>
+  <script>
+    const { createApp, ref, computed, onMounted } = Vue;
+    createApp({
+      setup() {
+        const isAuthed = ref(false);
+        const adminPin = ref('');
+        const config = ref({ status: 'collecting', title: '', budget: '' });
+        const gifts = ref([]);
+        const shareUrl = ref('');
+
+        const wonCount = computed(() => gifts.value.filter(g => g.winner).length);
+
+        const login = async () => {
+          try {
+            const res = await fetch('/api/admin/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ adminPin: adminPin.value })
+            });
+            if (res.ok) {
+              isAuthed.value = true;
+              loadData();
+            } else {
+              alert('密码错误！默认密码：8888');
+            }
+          } catch(e) {
+            alert('网络异常');
+          }
+        };
+
+        const loadData = async () => {
+          const res = await fetch('/api/public-state');
+          const data = await res.json();
+          config.value = data.config;
+          gifts.value = data.gifts;
+          shareUrl.value = data.shareUrl;
+        };
+
+        const lockAndStartRolling = async () => {
+          if (gifts.value.length < 2) {
+            alert('至少需要 2 位群友提交礼物才能开奖哦！');
+            return;
+          }
+          if (!confirm(`确定要锁定当前的 ${gifts.value.length} 份礼物并开启微信群抽奖吗？\n算法将保证绝不会抽到自己带的那份！`)) return;
+
+          const res = await fetch('/api/admin/lock-and-match', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ adminPin: adminPin.value })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            alert(`🎉 封池成功！已生成避开本人的专属抽取映射，群友可以开始抽奖了！`);
+            loadData();
+          } else {
+            alert(data.error || '操作失败');
+          }
+        };
+
+        const reopenCollection = async () => {
+          if (!confirm('确定要重新开放礼物收集吗？已抽奖记录将被重置。')) return;
+          await fetch('/api/admin/reopen-collection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ adminPin: adminPin.value })
+          });
+          alert('已重新开启收集！');
+          loadData();
+        };
+
+        const deleteGift = async (id, provider, name) => {
+          if (!confirm(`确定要移除 @${provider} 的礼物 "${name}" 吗？`)) return;
+          await fetch('/api/admin/gift/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ adminPin: adminPin.value, id })
+          });
+          loadData();
+        };
+
+        const clearAll = async () => {
+          if (!confirm('⚠️ 确定要清空所有人提交的礼物吗？此操作无法恢复！')) return;
+          await fetch('/api/admin/clear-all', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ adminPin: adminPin.value })
+          });
+          alert('已清空！');
+          loadData();
+        };
+
+        const copyWeChatNotice = () => {
+          let text = `🎄【圣诞礼物池全员清单与战报】🎁\n`;
+          text += `预算规范：50~70元 | 纯随机抽奖 (不抽自己)\n`;
+          text += `--------------------------------\n`;
+          gifts.value.forEach((g, i) => {
+            const winnerText = g.winner ? `-> 🎉 由 @${g.winner.name} 抽中！` : `-> [待抽取]`;
+            text += `${i+1}. @${g.provider} 带来：${g.icon} ${g.name} (${g.value}) ${winnerText}\n`;
+          });
+          text += `--------------------------------\n`;
+          text += `活动链接：${shareUrl.value}`;
+
+          navigator.clipboard.writeText(text).then(() => {
+            alert('战报清单已复制，可以直接粘贴发到微信群里！');
+          });
+        };
+
+        return {
+          isAuthed,
+          adminPin,
+          config,
+          gifts,
+          shareUrl,
+          wonCount,
+          login,
+          lockAndStartRolling,
+          reopenCollection,
+          deleteGift,
+          clearAll,
+          copyWeChatNotice
+        };
+      }
+    }).mount('#admin-app');
+  </script>
+</body>
+</html>
