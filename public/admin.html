@@ -233,7 +233,7 @@
           const data = await res.json();
           config.value = data.config;
           gifts.value = data.gifts;
-          shareUrl.value = data.shareUrl;
+          shareUrl.value = window.location.origin || data.shareUrl;
         };
 
         const lockAndStartRolling = async () => {

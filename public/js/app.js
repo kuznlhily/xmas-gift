@@ -5,7 +5,7 @@ createApp({
   setup() {
     // Public state
     const config = ref({
-      title: '🎄 微信群圣诞礼物大抽奖 🎁',
+      title: '🎄 2026 圣诞礼物大抽奖 🎁',
       budget: '50~70元',
       status: 'collecting', // 'collecting' | 'rolling'
       ruleTip: ''
@@ -220,7 +220,7 @@ createApp({
         stats.value = data.stats;
         gifts.value = data.gifts;
         history.value = data.history || [];
-        shareUrl.value = data.shareUrl || window.location.href;
+        shareUrl.value = window.location.origin || data.shareUrl;
         qrCodeDataUrl.value = data.qrCodeDataUrl || '';
 
         updateUserStatus();
@@ -264,7 +264,7 @@ createApp({
     const submitMyGift = async () => {
       initAudio();
       if (!currentName.value.trim()) {
-        showToast('请先输入你的微信群昵称！');
+        showToast('请先输入你的昵称！');
         return;
       }
       if (!submitForm.value.name.trim()) {
@@ -305,7 +305,7 @@ createApp({
       initAudio();
 
       if (!currentName.value.trim()) {
-        showToast('👉 请先输入或选择你的群昵称！');
+        showToast('👉 请先输入你的昵称！');
         return;
       }
 
@@ -404,7 +404,7 @@ createApp({
       ctx.textAlign = 'center';
       ctx.fillStyle = '#fde68a';
       ctx.font = 'bold 36px sans-serif';
-      ctx.fillText('🎄 2024 微信群圣诞礼物大抽奖 🎁', 375, 120);
+      ctx.fillText('🎄 2026 圣诞礼物大抽奖 🎁', 375, 120);
 
       ctx.fillStyle = '#ffffff';
       ctx.font = '22px sans-serif';

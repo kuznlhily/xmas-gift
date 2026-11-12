@@ -29,7 +29,7 @@ function getLocalIP() {
 // Initial state: starts in 'collecting' phase so friends can submit their gifts
 const defaultData = {
   config: {
-    title: '🎄 微信群圣诞礼物大抽奖 🎁',
+    title: '🎄 2026 圣诞礼物大抽奖 🎁',
     budget: '50~70元',
     ruleTip: '大家各自提交一份50~70元礼物进池，全员到齐后封池，100%纯随机抽取（绝不抽到自己的）！',
     adminPin: '8888',
@@ -89,8 +89,11 @@ let db = loadData();
 
 // 1. Public API: Get Room State & Gift Pool
 app.get('/api/public-state', async (req, res) => {
-  const localIP = getLocalIP();
-  const shareUrl = `http://${localIP}:${PORT}`;
+  // Automatically detect host (works on Render, localhost, or LAN)
+  const host = req.get('host');
+  const protocol = req.headers['x-forwarded-proto'] === 'https' ? 'https' : (req.protocol || 'http');
+  const shareUrl = `${protocol}://${host}`;
+
   let qrCodeDataUrl = '';
   try {
     qrCodeDataUrl = await QRCode.toDataURL(shareUrl, { margin: 1, color: { dark: '#165b33', light: '#ffffff' } });
@@ -128,7 +131,7 @@ app.post('/api/gift/submit', (req, res) => {
   }
 
   if (!provider || !provider.trim()) {
-    return res.status(400).json({ error: '请输入你的微信群昵称' });
+    return res.status(400).json({ error: '请输入你的昵称' });
   }
   if (!name || !name.trim()) {
     return res.status(400).json({ error: '请输入你买的礼物名称' });
@@ -341,9 +344,14 @@ app.post('/api/admin/clear-all', checkAdmin, (req, res) => {
   res.json({ success: true, message: '已清空礼物池，可重新开始收集！' });
 });
 
-// Admin page route
-app.get('/admin', (req, res) => {
+// Admin page route (renamed to secret /sillydog)
+app.get('/sillydog', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+// Explicitly 404 on old /admin
+app.get('/admin', (req, res) => {
+  res.status(404).send('Not Found');
 });
 
 // Start server
@@ -352,7 +360,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`====================================================`);
   console.log(`🎄 群友自报礼物池 + 圣诞疯狂抽奖 H5 启动就绪！`);
   console.log(`📱 玩家主页 (发微信群): http://${localIP}:${PORT}`);
-  console.log(`👑 管理员后台: http://${localIP}:${PORT}/admin`);
+  console.log(`👑 管理员后台 (防偷看专属路径): http://${localIP}:${PORT}/sillydog`);
   console.log(`🔑 管理员密码: ${db.config.adminPin}`);
   console.log(`====================================================`);
 });
