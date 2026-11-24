@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>🎄 2026 圣诞礼物大抽奖 🎁</title>
+  <title>🐾「呆猫集会所」周年群庆 · 猎人补给大抽奖 🍖</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <!-- Canvas Snow Animation -->
+  <!-- Canvas Embers Animation -->
   <canvas id="snow-canvas"></canvas>
 
   <div id="app" v-cloak>
@@ -17,7 +17,7 @@
       <div class="marquee-content">
         <div class="marquee-text">
           <span v-for="(h, i) in history" :key="i" style="margin-right: 28px;">
-            🎉 恭喜【{{ h.name }}】抽中 @{{ h.provider }} 的 <strong>{{ h.icon }} {{ h.giftName }}</strong> ({{ h.value }})！
+            🎉 恭喜苍蓝星【{{ h.name }}】斩获 @{{ h.provider }} 纳品的 <strong>{{ h.icon }} {{ h.giftName }}</strong> ({{ h.value }})！
           </span>
         </div>
       </div>
@@ -27,39 +27,38 @@
       <!-- Header -->
       <header class="hero-header">
         <h1 class="hero-title">
-          <span>🎄</span>
+          <span>🐾</span>
           <span>{{ config.title }}</span>
-          <span>🎁</span>
         </h1>
         <div class="budget-pill">
-          <span>💰 礼物预算标准：</span>
+          <span>💰 纳品物资预算指导：</span>
           <span style="color: #fbbf24; font-size: 14px;">{{ config.budget }}</span>
-          <span style="opacity: 0.85;">(群友自备 · 纯随机抽)</span>
+          <span style="opacity: 0.9;">(猎人自备 · 纯随机抽取)</span>
         </div>
       </header>
 
-      <!-- PHASE 1: COLLECTING GIFTS (收集礼物阶段) -->
-      <section v-if="config.status === 'collecting'" class="slot-machine-card" style="border-color: #38bdf8;">
+      <!-- PHASE 1: COLLECTING (集会所猎人纳品阶段) -->
+      <section v-if="config.status === 'collecting'" class="slot-machine-card" style="border-color: #f59e0b;">
         <div style="text-align: center; margin-bottom: 16px;">
-          <div style="display: inline-block; background: rgba(56, 189, 248, 0.2); border: 1px solid #38bdf8; color: #38bdf8; border-radius: 20px; padding: 4px 14px; font-size: 12px; font-weight: 800; margin-bottom: 8px;">
-            🟡 阶段一：群友礼物征集中
+          <div style="display: inline-block; background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fbbf24; border-radius: 20px; padding: 4px 14px; font-size: 12px; font-weight: 800; margin-bottom: 8px;">
+            🟡 阶段一：集会所纳品征集中
           </div>
-          <h2 style="font-size: 20px; font-weight: 900; color: #fff9e6;">
-            已收集到 <span style="color: #fbbf24; font-size: 26px;">{{ stats.totalGifts }}</span> 份群友礼物！
+          <h2 style="font-size: 20px; font-weight: 900; color: #fffbeb;">
+            已汇聚 <span style="color: #fbbf24; font-size: 26px;">{{ stats.totalGifts }}</span> 份猎人补给物资！
           </h2>
           <p style="font-size: 12px; color: #cbd5e1; margin-top: 4px;">
-            每个人买一份50~70元礼物入池，等大家到齐后房主封池开奖！
+            每位猎人上交一份 50~70 元物资，全员到齐后大团长封池开炉！
           </p>
         </div>
 
         <!-- Nickname Input -->
         <div class="user-select-box">
-          <label class="user-select-label">👤 你的昵称：</label>
+          <label class="user-select-label">👤 你的猎人昵称：</label>
           <input 
             v-model="currentName" 
             type="text" 
             class="user-input" 
-            placeholder="输入你的昵称（方便大家认出你）"
+            placeholder="输入你的猎人名（如：太刀侠、猫猫头）"
             @input="onNameChange"
             maxlength="15"
           >
@@ -68,7 +67,7 @@
         <!-- If current user already submitted a gift -->
         <div v-if="mySubmittedGift" style="background: rgba(34, 197, 94, 0.2); border: 1px solid #4ade80; border-radius: 14px; padding: 12px; margin-bottom: 14px; text-align: center;">
           <div style="font-size: 13px; color: #4ade80; font-weight: 700;">
-            ✅ 你已成功登记礼物进池：
+            ✅ 你已成功纳品物资进池：
           </div>
           <div style="font-size: 18px; font-weight: 900; color: #fff; margin: 6px 0;">
             {{ mySubmittedGift.icon }} {{ mySubmittedGift.name }} ({{ mySubmittedGift.value }})
@@ -77,19 +76,19 @@
             style="background: transparent; border: none; color: #fbbf24; font-size: 12px; text-decoration: underline; cursor: pointer;"
             @click="openSubmitModal"
           >
-            ✏️ 点击修改我登记的礼物
+            ✏️ 点击修改我上交的物资
           </button>
         </div>
 
         <!-- Big Button: Submit Gift -->
-        <button v-else class="btn-pull-lever" style="background: linear-gradient(135deg, #15803d 0%, #166534 100%);" @click="openSubmitModal">
-          <span>🎁</span>
-          <span>登记我买的礼物 (¥50~70)</span>
-          <span>✨</span>
+        <button v-else class="btn-pull-lever" style="background: linear-gradient(135deg, #b91c1c 0%, #78350f 100%);" @click="openSubmitModal">
+          <span>📦</span>
+          <span>上交我的狩猎物资 (¥50~70)</span>
+          <span>🍖</span>
         </button>
       </section>
 
-      <!-- PHASE 2: ROLLING (封池开奖阶段 - 老虎机) -->
+      <!-- PHASE 2: ROLLING (开炉炼金抽奖阶段) -->
       <section v-else class="slot-machine-card">
         <!-- Neon Blinking Lights -->
         <div class="neon-dots">
@@ -104,17 +103,17 @@
         <!-- If user already won a gift -->
         <div v-if="myPrize" class="my-prize-banner">
           <div style="font-size: 12px; font-weight: 800; color: #b45309; margin-bottom: 6px;">
-            🏆 你的专属抽奖战报
+            🏆 你的狩猎战利品结算单
           </div>
           <div style="font-size: 46px; margin: 4px 0;">{{ myPrize.icon }}</div>
-          <div style="font-size: 18px; font-weight: 900; color: #991b1b; margin-bottom: 4px;">
+          <div style="font-size: 18px; font-weight: 900; color: #b91c1c; margin-bottom: 4px;">
             {{ myPrize.name }}
           </div>
-          <div style="font-size: 13px; color: #64748b; margin-bottom: 12px;">
-            估值：<strong style="color: #b45309;">{{ myPrize.value }}</strong> | 由【@{{ myPrize.provider }}】用心准备提供
+          <div style="font-size: 13px; color: #78350f; margin-bottom: 12px;">
+            估值：<strong style="color: #b45309;">{{ myPrize.value }}</strong> | 由猎人【@{{ myPrize.provider }}】纳品提供
           </div>
           <button class="btn-pull-lever" style="font-size: 15px; padding: 10px;" @click="generatePoster">
-            📸 生成战报海报发群炫耀
+            📸 生成集会所公会战报炫耀
           </button>
         </div>
 
@@ -122,12 +121,12 @@
         <div v-else>
           <!-- Select Name -->
           <div class="user-select-box">
-            <label class="user-select-label">👤 请输入你的昵称：</label>
+            <label class="user-select-label">👤 请输入你的猎人昵称：</label>
             <input 
               v-model="currentName" 
               type="text" 
               class="user-input" 
-              placeholder="输入你的昵称开始抽取"
+              placeholder="输入你的猎人昵称开启炼金"
               @input="onNameChange"
               maxlength="15"
             >
@@ -136,7 +135,7 @@
           <!-- Slot Machine Screen -->
           <div class="slot-screen">
             <div class="slot-item-display" :class="{ spinning: isSpinning }">
-              <div class="slot-item-icon">{{ displaySlotItem.icon || '🎁' }}</div>
+              <div class="slot-item-icon">{{ displaySlotItem.icon || '🍖' }}</div>
               <div class="slot-item-name">{{ displaySlotItem.name }}</div>
               <div class="slot-item-val" v-if="displaySlotItem.value">{{ displaySlotItem.value }}</div>
             </div>
@@ -149,28 +148,28 @@
             @click="startRoll"
           >
             <span>🕹️</span>
-            <span>{{ isSpinning ? '疯狂摇奖中...' : (stats.remainingGifts === 0 ? '礼物池已被抢空' : 'PULL! 摇出属于我的圣诞好礼') }}</span>
-            <span>✨</span>
+            <span>{{ isSpinning ? '猫猫炼金熔炉运转中...' : (stats.remainingGifts === 0 ? '集会所物资已被抢空' : '上手に焼けました！开摇！') }}</span>
+            <span>🍖</span>
           </button>
         </div>
       </section>
 
-      <!-- ================= 🎁 公开圣诞礼物池展示 ================= -->
+      <!-- ================= 🎁 公开纳品物资池 ================= -->
       <section style="margin-bottom: 24px;">
         <div class="pool-section-header">
           <div class="pool-title">
-            <span>🎁 群友自报公开礼物池 ({{ gifts.length }}份)</span>
+            <span>🎁 集会所猎人纳品池 ({{ gifts.length }}份)</span>
           </div>
           <button 
-            style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 20px; padding: 4px 10px; font-size: 12px; cursor: pointer;"
+            style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: #fff; border-radius: 20px; padding: 4px 10px; font-size: 12px; cursor: pointer;"
             @click="showQrModal = true"
           >
-            📱 邀请群友
+            📱 呼叫群猎人
           </button>
         </div>
 
-        <div v-if="gifts.length === 0" style="background: rgba(0,0,0,0.3); border-radius: 14px; padding: 24px; text-align: center; color: #94a3b8; font-size: 13px;">
-          暂无群友提交礼物，点击上方按钮成为第一个入池的小伙伴吧！🎄
+        <div v-if="gifts.length === 0" style="background: rgba(0,0,0,0.35); border-radius: 14px; padding: 24px; text-align: center; color: #94a3b8; font-size: 13px;">
+          暂无猎人上交纳品物资，点击上方按钮成为第一个纳品的苍蓝星吧！🍖
         </div>
 
         <div v-else class="gift-cards-grid">
@@ -182,13 +181,13 @@
           >
             <div class="gift-card-icon">{{ g.icon }}</div>
             <div class="gift-card-name">{{ g.name }}</div>
-            <div style="font-size: 11px; color: #38bdf8; margin-bottom: 4px;">
-              由 @{{ g.provider }} 带来
+            <div style="font-size: 11px; color: #fbbf24; margin-bottom: 4px;">
+              由 @{{ g.provider }} 纳品
             </div>
             <div class="gift-card-footer">
               <span class="gift-val">{{ g.value }}</span>
               <span v-if="g.winner" class="gift-status-tag tag-won">
-                @{{ g.winner.name }} 抽走
+                @{{ g.winner.name }} 斩获
               </span>
               <span v-else class="gift-status-tag tag-available">
                 ✨ 待抽取
@@ -199,9 +198,9 @@
       </section>
 
       <!-- Rules Hint -->
-      <div style="background: rgba(0,0,0,0.3); border-radius: 14px; padding: 12px 14px; font-size: 12px; color: #94a3b8; line-height: 1.6; margin-bottom: 20px;">
-        💡 <strong>规则保证：</strong>
-        群友自主登记礼物，全员到齐后封池。系统算法严格保证<strong>绝对不会抽到自己带来的礼物</strong>！完全随机，人人有份！
+      <div style="background: rgba(0,0,0,0.4); border-radius: 14px; padding: 12px 14px; font-size: 12px; color: #cbd5e1; line-height: 1.6; margin-bottom: 20px;">
+        💡 <strong>猎人公会防假赛条例：</strong>
+        全员各自登记物资，到齐后封池。系统算法严格保证<strong>绝不会抽到自己带来的物资</strong>！100% 纯随机分发，人人有份！
       </div>
     </div>
 
@@ -209,41 +208,42 @@
     <div v-if="showSubmitModal" class="modal-overlay" @click.self="showSubmitModal = false">
       <div class="winner-modal-card" style="text-align: left; max-width: 400px;">
         <h3 style="font-size: 18px; color: #fbbf24; text-align: center; margin-bottom: 16px;">
-          🎁 登记你的自选礼物进池
+          📦 登记你的狩猎物资进池
         </h3>
 
         <div class="user-select-box">
-          <label class="user-select-label">你的昵称 *</label>
-          <input v-model="currentName" type="text" class="user-input" placeholder="如：阿杰、小美" maxlength="15">
+          <label class="user-select-label">猎人昵称 *</label>
+          <input v-model="currentName" type="text" class="user-input" placeholder="输入你的名字（方便大家认出你）" maxlength="15">
         </div>
 
         <div class="user-select-box">
-          <label class="user-select-label">礼物名称 *</label>
-          <input v-model="submitForm.name" type="text" class="user-input" placeholder="如：🔥 智能发热围巾、复古小音响" maxlength="25">
+          <label class="user-select-label">物资名称 *</label>
+          <input v-model="submitForm.name" type="text" class="user-input" placeholder="如：🍖 熟肉抱枕、特制艾露马克杯" maxlength="25">
         </div>
 
         <div class="user-select-box">
-          <label class="user-select-label">礼物买入价格 (建议 50~70元)</label>
+          <label class="user-select-label">买入价格 (建议 50~70元)</label>
           <input v-model="submitForm.price" type="text" class="user-input" placeholder="如：¥68">
         </div>
 
         <div class="user-select-box">
-          <label class="user-select-label">挑选一个可爱的礼物图标：</label>
-          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-            <span 
-              v-for="ic in iconList" 
-              :key="ic"
-              style="font-size: 24px; padding: 6px; border-radius: 10px; cursor: pointer; background: rgba(255,255,255,0.08); transition: transform 0.1s;"
-              :style="{ background: submitForm.icon === ic ? '#f59e0b' : 'rgba(255,255,255,0.08)' }"
-              @click="submitForm.icon = ic"
+          <label class="user-select-label">挑选猎人专属图标：</label>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+            <div 
+              v-for="item in iconList" 
+              :key="item.ic"
+              style="padding: 6px; border-radius: 10px; cursor: pointer; text-align: center; background: rgba(255,255,255,0.08); transition: transform 0.1s;"
+              :style="{ background: submitForm.icon === item.ic ? '#f59e0b' : 'rgba(255,255,255,0.08)' }"
+              @click="submitForm.icon = item.ic"
             >
-              {{ ic }}
-            </span>
+              <div style="font-size: 22px;">{{ item.ic }}</div>
+              <div style="font-size: 10px; color: #cbd5e1; margin-top: 2px;">{{ item.desc }}</div>
+            </div>
           </div>
         </div>
 
         <button class="btn-pull-lever" style="margin-top: 10px; padding: 12px;" @click="submitMyGift">
-          <span>✨ 确认提交进礼物池</span>
+          <span>✨ 确认上交纳品进池</span>
         </button>
         <button class="btn-secondary" @click="showSubmitModal = false">
           取消
@@ -254,22 +254,22 @@
     <!-- ================= 🏆 WINNER POPUP MODAL ================= -->
     <div v-if="showWinnerModal" class="modal-overlay" @click.self="showWinnerModal = false">
       <div class="winner-modal-card">
-        <div class="winner-badge">🎉 欧 气 大 爆 发 🎉</div>
-        <div style="font-size: 15px; color: #cbd5e1;">恭喜欧皇【{{ currentName }}】斩获</div>
+        <div class="winner-badge">🏆 QUEST COMPLETE 达成！</div>
+        <div style="font-size: 15px; color: #fef08a;">恭喜苍蓝星【{{ currentName }}】斩获报酬</div>
         
         <div class="winner-gift-icon">{{ winningGift?.icon }}</div>
         <div class="winner-gift-title">{{ winningGift?.name }}</div>
         <div class="winner-gift-value">{{ winningGift?.value }}</div>
         
-        <div style="font-size: 13px; color: #38bdf8; margin-bottom: 18px; font-weight: 700;">
-          由群友 @{{ winningGift?.provider }} 精心准备提供！
+        <div style="font-size: 13px; color: #fbbf24; margin-bottom: 18px; font-weight: 700;">
+          由猎人 @{{ winningGift?.provider }} 纳品赞助！
         </div>
 
         <button class="btn-pull-lever" style="padding: 12px;" @click="generatePoster">
-          <span>📸 生成朋友圈战报海报</span>
+          <span>📸 生成集会所公会战报海报</span>
         </button>
         <button class="btn-secondary" @click="showWinnerModal = false">
-          收下礼物，去围观礼物池
+          收下报酬，围观集会所
         </button>
       </div>
     </div>
@@ -277,13 +277,13 @@
     <!-- ================= 📸 POSTER MODAL ================= -->
     <div v-if="showPosterModal" class="modal-overlay" @click.self="showPosterModal = false">
       <div class="winner-modal-card" style="max-width: 420px; padding: 20px;">
-        <h3 style="font-size: 18px; color: #fbbf24; margin-bottom: 8px;">📸 你的中奖专属战报</h3>
-        <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 12px;">长按下方图片保存，发到微信群里炫耀战绩！</p>
+        <h3 style="font-size: 18px; color: #fbbf24; margin-bottom: 8px;">📜 猎人公会特别战报单</h3>
+        <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 12px;">长按保存图片，发到群里宣告完成特别纳品任务！</p>
         
-        <img :src="posterDataUrl" alt="中奖战报" style="width: 100%; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: block; margin-bottom: 14px;">
+        <img :src="posterDataUrl" alt="公会战报" style="width: 100%; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); display: block; margin-bottom: 14px;">
 
-        <button class="btn-secondary" @click="copyText(shareUrl, '链接已复制，去微信群分享吧！')">
-          📋 复制抽奖链接发群
+        <button class="btn-secondary" @click="copyText(shareUrl, '集会所链接已复制，去群里分享吧！')">
+          📋 复制集会所链接发群
         </button>
         <button class="btn-secondary" style="border: none; background: transparent; color: #94a3b8;" @click="showPosterModal = false">
           关闭
@@ -294,19 +294,19 @@
     <!-- ================= 📱 INVITE / QR MODAL ================= -->
     <div v-if="showQrModal" class="modal-overlay" @click.self="showQrModal = false">
       <div class="winner-modal-card" style="max-width: 380px;">
-        <h3 style="font-size: 18px; color: #fbbf24; margin-bottom: 8px;">📱 邀请微信群友</h3>
-        <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 14px;">微信扫一扫，或复制链接直接发进微信群！</p>
+        <h3 style="font-size: 18px; color: #fbbf24; margin-bottom: 8px;">📱 呼叫集会所猎人</h3>
+        <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 14px;">扫码进入「呆猫集会所」群庆抽奖！</p>
         
         <div style="background: #fff; padding: 10px; border-radius: 14px; display: inline-block; margin-bottom: 12px;">
           <img v-if="qrCodeDataUrl" :src="qrCodeDataUrl" alt="二维码" style="width: 180px; height: 180px; display: block;">
         </div>
 
-        <div style="background: rgba(0,0,0,0.4); padding: 8px; border-radius: 8px; font-size: 12px; color: #94a3b8; word-break: break-all; margin-bottom: 14px;">
+        <div style="background: rgba(0,0,0,0.5); padding: 8px; border-radius: 8px; font-size: 12px; color: #94a3b8; word-break: break-all; margin-bottom: 14px;">
           {{ shareUrl }}
         </div>
 
-        <button class="btn-pull-lever" style="padding: 12px;" @click="copyText(shareUrl, '活动链接已复制，快发到微信群里吧！')">
-          📋 复制链接发群
+        <button class="btn-pull-lever" style="padding: 12px;" @click="copyText(shareUrl, '集会所链接已复制，快发到群里吧！')">
+          📋 复制链接呼叫全员
         </button>
         <button class="btn-secondary" @click="showQrModal = false">
           关闭

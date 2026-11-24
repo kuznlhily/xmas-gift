@@ -26,37 +26,36 @@ function getLocalIP() {
   return 'localhost';
 }
 
-// Initial state: starts in 'collecting' phase so friends can submit their gifts
+// Initial state: Monster Hunter "呆猫集会所" Group Celebration Theme
 const defaultData = {
   config: {
-    title: '🎄 2026 圣诞礼物大抽奖 🎁',
+    title: '🐾「呆猫集会所」周年群庆 · 猎人补给大抽奖 🍖',
     budget: '50~70元',
-    ruleTip: '大家各自提交一份50~70元礼物进池，全员到齐后封池，100%纯随机抽取（绝不抽到自己的）！',
+    ruleTip: '各位苍蓝星各自上交一份50~70元狩猎物资，全员到齐后封池，艾露猫炼金机100%纯随机抽取（绝不抽到自己的纳品）！',
     adminPin: '8888',
-    status: 'collecting' // 'collecting' (收集礼物) | 'rolling' (开放抽奖) | 'ended'
+    status: 'collecting' // 'collecting' (猎人纳品阶段) | 'rolling' (开炉炼金抽奖) | 'ended'
   },
   gifts: [
-    // Pre-populate 2 sample gifts submitted by friends so the page isn't empty initially
+    // Pre-populate 2 sample MH themed gifts
     {
       id: 'g_sample_1',
-      name: '🔥 智能数显发热围巾',
+      name: '🍖 熟肉抱枕 & 猎人特酿生啤杯',
       value: '¥68',
-      icon: '🧣',
-      provider: '小鹿',
+      icon: '🍖',
+      provider: '集会所看板娘',
       winner: null,
       submittedAt: Date.now() - 3600000
     },
     {
       id: 'g_sample_2',
-      name: '📻 复古黑胶无线小音响',
+      name: '🐱 艾露猫猫爪肉垫防寒手套',
       value: '¥59',
-      icon: '📻',
-      provider: '阿杰',
+      icon: '🐾',
+      provider: '大团长',
       winner: null,
       submittedAt: Date.now() - 1800000
     }
   ],
-  // Pre-calculated derangement assignments: { "小明": "g_xxx" }
   assignments: {},
   history: []
 };
@@ -89,14 +88,13 @@ let db = loadData();
 
 // 1. Public API: Get Room State & Gift Pool
 app.get('/api/public-state', async (req, res) => {
-  // Automatically detect host (works on Render, localhost, or LAN)
   const host = req.get('host');
   const protocol = req.headers['x-forwarded-proto'] === 'https' ? 'https' : (req.protocol || 'http');
   const shareUrl = `${protocol}://${host}`;
 
   let qrCodeDataUrl = '';
   try {
-    qrCodeDataUrl = await QRCode.toDataURL(shareUrl, { margin: 1, color: { dark: '#165b33', light: '#ffffff' } });
+    qrCodeDataUrl = await QRCode.toDataURL(shareUrl, { margin: 1, color: { dark: '#1e293b', light: '#ffffff' } });
   } catch (e) {}
 
   const totalGifts = db.gifts.length;
@@ -122,27 +120,27 @@ app.get('/api/public-state', async (req, res) => {
   });
 });
 
-// 2. Member Submits their Gift to Pool (群友登记自己的礼物)
+// 2. Member Submits their Gift to Pool (猎人纳品登记)
 app.post('/api/gift/submit', (req, res) => {
   const { provider, name, value, icon } = req.body;
 
   if (db.config.status !== 'collecting') {
-    return res.status(400).json({ error: '当前礼物池已封存开奖，暂时无法添加新礼物哦！' });
+    return res.status(400).json({ error: '当前集会所补给池已封存开奖，暂时无法添加新物资哦！' });
   }
 
   if (!provider || !provider.trim()) {
-    return res.status(400).json({ error: '请输入你的昵称' });
+    return res.status(400).json({ error: '请输入你的猎人昵称' });
   }
   if (!name || !name.trim()) {
-    return res.status(400).json({ error: '请输入你买的礼物名称' });
+    return res.status(400).json({ error: '请输入你纳品的礼物/物资名称' });
   }
 
   const cleanProvider = provider.trim();
   const cleanName = name.trim();
   const cleanValue = (value && value.trim()) ? value.trim() : '¥60';
-  const cleanIcon = icon || '🎁';
+  const cleanIcon = icon || '🍖';
 
-  // Check if this provider already submitted
+  // Check if this hunter already submitted
   const existingIndex = db.gifts.findIndex(g => g.provider.toLowerCase() === cleanProvider.toLowerCase());
   if (existingIndex >= 0) {
     // Update existing submission
@@ -175,19 +173,19 @@ app.post('/api/gift/submit', (req, res) => {
 app.post('/api/roll', (req, res) => {
   const { name } = req.body;
   if (!name || !name.trim()) {
-    return res.status(400).json({ error: '请选择或输入你的群昵称！' });
+    return res.status(400).json({ error: '请选择或输入你的猎人昵称！' });
   }
   const cleanName = name.trim();
 
   if (db.config.status !== 'rolling') {
-    return res.status(400).json({ error: '当前还在收集礼物阶段，请等待房主封池开奖！' });
+    return res.status(400).json({ error: '集会所仍在纳品准备中，请等待大团长封池开奖！' });
   }
 
   // Check if user already won
   const alreadyWon = db.gifts.find(g => g.winner && g.winner.name.toLowerCase() === cleanName.toLowerCase());
   if (alreadyWon) {
     return res.status(400).json({
-      error: `你已经抽过礼物啦！你抽中的是：【${alreadyWon.name}】`,
+      error: `猎人你已经领过报酬啦！你斩获的是：【${alreadyWon.name}】`,
       gift: alreadyWon
     });
   }
@@ -200,16 +198,15 @@ app.post('/api/roll', (req, res) => {
     pickedGift = db.gifts.find(g => g.id === assignedGiftId && !g.winner);
   }
 
-  // Fallback random pick if not pre-assigned (e.g. joined late or guest roll)
+  // Fallback random pick if not pre-assigned
   if (!pickedGift) {
     const available = db.gifts.filter(g => !g.winner && g.provider.toLowerCase() !== cleanName.toLowerCase());
     if (available.length > 0) {
       pickedGift = available[Math.floor(Math.random() * available.length)];
     } else {
-      // Last resort if only self gift remains
       const anyAvailable = db.gifts.filter(g => !g.winner);
       if (anyAvailable.length === 0) {
-        return res.status(400).json({ error: '礼物池已经被抽空啦！' });
+        return res.status(400).json({ error: '集会所补给池已被全部领空啦！' });
       }
       pickedGift = anyAvailable[0];
     }
@@ -239,7 +236,7 @@ app.post('/api/roll', (req, res) => {
   });
 });
 
-// 4. Strict Derangement Algorithm Generator: A person NEVER draws their own gift
+// 4. Strict Derangement Algorithm (保证绝不抽到自己带来的纳品)
 function generateDerangementAssignments(gifts) {
   const n = gifts.length;
   if (n < 2) return {};
@@ -247,7 +244,6 @@ function generateDerangementAssignments(gifts) {
   const providers = gifts.map(g => g.provider);
   let assigned = null;
 
-  // Try random shuffle up to 1000 times
   for (let attempt = 0; attempt < 1000; attempt++) {
     const candidate = [...gifts];
     for (let i = n - 1; i > 0; i--) {
@@ -269,7 +265,6 @@ function generateDerangementAssignments(gifts) {
     }
   }
 
-  // Fallback: simple shift by 1 if providers are distinct, or swap
   if (!assigned) {
     assigned = gifts.map((_, i) => gifts[(i + 1) % n]);
   }
@@ -286,7 +281,7 @@ function generateDerangementAssignments(gifts) {
 function checkAdmin(req, res, next) {
   const pin = req.headers['x-admin-pin'] || req.body.adminPin;
   if (pin !== db.config.adminPin) {
-    return res.status(403).json({ error: '管理员密码错误，默认密码为 8888' });
+    return res.status(403).json({ error: '大团长密码错误，默认密码为 8888' });
   }
   next();
 }
@@ -303,10 +298,9 @@ app.post('/api/admin/login', (req, res) => {
 // Admin: Lock pool and start rolling (封池开奖)
 app.post('/api/admin/lock-and-match', checkAdmin, (req, res) => {
   if (db.gifts.length < 2) {
-    return res.status(400).json({ error: '至少需要 2 份群友礼物才能封池开奖哦！' });
+    return res.status(400).json({ error: '集会所至少需要 2 位猎人纳品才能封池开奖哦！' });
   }
 
-  // Generate perfect derangement mapping (no one gets own gift)
   db.assignments = generateDerangementAssignments(db.gifts);
   db.config.status = 'rolling';
   db.gifts.forEach(g => { g.winner = null; });
@@ -323,7 +317,7 @@ app.post('/api/admin/reopen-collection', checkAdmin, (req, res) => {
   db.gifts.forEach(g => { g.winner = null; });
   db.history = [];
   saveData(db);
-  res.json({ success: true, message: '已重新开启礼物收集阶段！' });
+  res.json({ success: true, message: '已重新开启集会所纳品阶段！' });
 });
 
 // Admin: Delete a gift (移除捣乱或错误的礼物)
@@ -334,17 +328,17 @@ app.post('/api/admin/gift/delete', checkAdmin, (req, res) => {
   res.json({ success: true, gifts: db.gifts });
 });
 
-// Admin: Reset everything (清空所有人或恢复示例)
+// Admin: Reset everything
 app.post('/api/admin/clear-all', checkAdmin, (req, res) => {
   db.gifts = [];
   db.assignments = {};
   db.history = [];
   db.config.status = 'collecting';
   saveData(db);
-  res.json({ success: true, message: '已清空礼物池，可重新开始收集！' });
+  res.json({ success: true, message: '已清空补给池，可重新开始纳品！' });
 });
 
-// Admin page route (renamed to secret /sillydog)
+// Admin route (Secret /sillydog - 加尔克专属入口)
 app.get('/sillydog', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
@@ -358,9 +352,9 @@ app.get('/admin', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   const localIP = getLocalIP();
   console.log(`====================================================`);
-  console.log(`🎄 群友自报礼物池 + 圣诞疯狂抽奖 H5 启动就绪！`);
-  console.log(`📱 玩家主页 (发微信群): http://${localIP}:${PORT}`);
-  console.log(`👑 管理员后台 (防偷看专属路径): http://${localIP}:${PORT}/sillydog`);
-  console.log(`🔑 管理员密码: ${db.config.adminPin}`);
+  console.log(`🐾 呆猫集会所 · 周年群庆补给抽奖 H5 启动就绪！`);
+  console.log(`📱 猎人主页 (发微信群): http://${localIP}:${PORT}`);
+  console.log(`👑 大团长后台 (加尔克暗道): http://${localIP}:${PORT}/sillydog`);
+  console.log(`🔑 房主密码: ${db.config.adminPin}`);
   console.log(`====================================================`);
 });

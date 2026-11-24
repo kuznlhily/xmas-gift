@@ -1,11 +1,11 @@
-// Christmas Gift Pool Lottery - Main App Script
+// Monster Hunter "呆猫集会所" Group Celebration - Main App Script
 const { createApp, ref, computed, onMounted, onUnmounted } = Vue;
 
 createApp({
   setup() {
     // Public state
     const config = ref({
-      title: '🎄 2026 圣诞礼物大抽奖 🎁',
+      title: '🐾「呆猫集会所」周年群庆 · 猎人补给大抽奖 🍖',
       budget: '50~70元',
       status: 'collecting', // 'collecting' | 'rolling'
       ruleTip: ''
@@ -26,13 +26,28 @@ createApp({
     const submitForm = ref({
       name: '',
       price: '¥65',
-      icon: '🎁'
+      icon: '🍖'
     });
-    const iconList = ['🎁', '🧣', '📻', '☕', '🍷', '💡', '🎮', '🕯️', '🧸', '🍪', '🧦', '✨'];
+
+    // Monster Hunter Themed Icons
+    const iconList = [
+      { ic: '🍖', desc: '熟肉/猫饭' },
+      { ic: '🐾', desc: '艾露猫爪' },
+      { ic: '🐱', desc: '呆萌随从' },
+      { ic: '⚔️', desc: '猎人神兵' },
+      { ic: '🛡️', desc: '坚固防具' },
+      { ic: '🐉', desc: '古龙素材' },
+      { ic: '🧪', desc: '强走药G' },
+      { ic: '💎', desc: '天鳞/宝玉' },
+      { ic: '🍯', desc: '特产蜂蜜' },
+      { ic: '💣', desc: '大爆弹G' },
+      { ic: '🍺', desc: '集会麦酒' },
+      { ic: '📯', desc: '狩猎号角' }
+    ];
 
     // Slot Machine State
     const isSpinning = ref(false);
-    const displaySlotItem = ref({ icon: '🎁', name: '准备摇奖...', value: '¥50~70' });
+    const displaySlotItem = ref({ icon: '🍖', name: '准备炼金中...', value: '¥50~70' });
 
     // Modals
     const showWinnerModal = ref(false);
@@ -50,7 +65,7 @@ createApp({
       setTimeout(() => { toast.value.show = false; }, duration);
     };
 
-    // Audio Synthesizer
+    // Audio Synthesizer (Monster Hunter SFX)
     let audioCtx = null;
     const initAudio = () => {
       if (!audioCtx) {
@@ -66,7 +81,7 @@ createApp({
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = 'triangle';
-        osc.frequency.setValueAtTime(800 + Math.random() * 200, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(750 + Math.random() * 200, audioCtx.currentTime);
         gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
         osc.connect(gain);
@@ -76,24 +91,35 @@ createApp({
       } catch (e) {}
     };
 
-    const playWinFanfare = () => {
+    // Classic Monster Hunter "So Tasty! / 上手に焼けました～" Victory Fanfare
+    const playMHFanfare = () => {
       if (isMuted.value || !audioCtx) return;
-      const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
-      notes.forEach((freq, i) => {
+      // Notes: G4, C5, E5, G5, C6 (So tasty fanfare!)
+      const notes = [
+        { f: 392.00, d: 0.15 }, // G4
+        { f: 523.25, d: 0.15 }, // C5
+        { f: 659.25, d: 0.15 }, // E5
+        { f: 783.99, d: 0.25 }, // G5
+        { f: 1046.50, d: 0.60 } // C6 (Ta-da!)
+      ];
+
+      let elapsed = 0;
+      notes.forEach((n) => {
         setTimeout(() => {
           try {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = 'triangle';
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+            osc.frequency.setValueAtTime(n.f, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + n.d);
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             osc.start();
-            osc.stop(audioCtx.currentTime + 0.35);
+            osc.stop(audioCtx.currentTime + n.d);
           } catch(e) {}
-        }, i * 110);
+        }, elapsed * 1000);
+        elapsed += n.d * 0.85;
       });
     };
 
@@ -114,7 +140,7 @@ createApp({
       canvas.height = window.innerHeight;
 
       const particles = [];
-      const colors = ['#c41e3a', '#15803d', '#fbbf24', '#ffffff', '#38bdf8', '#ffd700'];
+      const colors = ['#f59e0b', '#fbbf24', '#b91c1c', '#ea580c', '#ffffff', '#22c55e'];
 
       for (let i = 0; i < 110; i++) {
         particles.push({
@@ -164,8 +190,8 @@ createApp({
       animate();
     };
 
-    // Snow animation on canvas
-    const initSnow = () => {
+    // Hearth Embers & Sparks Animation (集会所壁炉暖火星动效)
+    const initEmbers = () => {
       const canvas = document.getElementById('snow-canvas');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
@@ -177,38 +203,42 @@ createApp({
         h = canvas.height = window.innerHeight;
       });
 
-      const flakes = [];
-      for (let i = 0; i < 50; i++) {
-        flakes.push({
+      const embers = [];
+      for (let i = 0; i < 45; i++) {
+        embers.push({
           x: Math.random() * w,
           y: Math.random() * h,
-          r: Math.random() * 3 + 1,
-          d: Math.random() * 1.5 + 0.5,
-          drift: Math.random() * 0.8 - 0.4
+          r: Math.random() * 2.5 + 1,
+          speedY: Math.random() * 1.2 + 0.4,
+          speedX: Math.random() * 0.8 - 0.4,
+          alpha: Math.random() * 0.7 + 0.3
         });
       }
 
-      const drawSnow = () => {
+      const drawEmbers = () => {
         ctx.clearRect(0, 0, w, h);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        ctx.beginPath();
-        flakes.forEach(f => {
-          ctx.moveTo(f.x, f.y);
-          ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2, true);
-        });
-        ctx.fill();
+        embers.forEach(e => {
+          ctx.beginPath();
+          ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(245, 158, 11, ${e.alpha})`;
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = '#ea580c';
+          ctx.fill();
 
-        flakes.forEach(f => {
-          f.y += f.d;
-          f.x += f.drift;
-          if (f.y > h) { f.y = -5; f.x = Math.random() * w; }
-          if (f.x > w) f.x = 0;
-          if (f.x < 0) f.x = w;
+          e.y -= e.speedY; // float up like campfire embers
+          e.x += e.speedX;
+
+          if (e.y < -10) {
+            e.y = h + 10;
+            e.x = Math.random() * w;
+          }
+          if (e.x > w) e.x = 0;
+          if (e.x < 0) e.x = w;
         });
 
-        requestAnimationFrame(drawSnow);
+        requestAnimationFrame(drawEmbers);
       };
-      drawSnow();
+      drawEmbers();
     };
 
     // Fetch Public State
@@ -229,7 +259,6 @@ createApp({
       }
     };
 
-    // Update current user's submitted gift & won prize
     const updateUserStatus = () => {
       if (!currentName.value) {
         mySubmittedGift.value = null;
@@ -243,19 +272,17 @@ createApp({
 
     const onNameChange = () => {
       if (currentName.value.trim()) {
-        localStorage.setItem('xmas_saved_name', currentName.value.trim());
+        localStorage.setItem('mh_saved_hunter_name', currentName.value.trim());
       }
       updateUserStatus();
     };
 
-    // Open Gift Submission Modal
     const openSubmitModal = () => {
       initAudio();
       if (mySubmittedGift.value) {
-        // Pre-fill existing submission
         submitForm.value.name = mySubmittedGift.value.name;
         submitForm.value.price = mySubmittedGift.value.value;
-        submitForm.value.icon = mySubmittedGift.value.icon || '🎁';
+        submitForm.value.icon = mySubmittedGift.value.icon || '🍖';
       }
       showSubmitModal.value = true;
     };
@@ -264,11 +291,11 @@ createApp({
     const submitMyGift = async () => {
       initAudio();
       if (!currentName.value.trim()) {
-        showToast('请先输入你的昵称！');
+        showToast('请先输入你的猎人昵称！');
         return;
       }
       if (!submitForm.value.name.trim()) {
-        showToast('请输入你买的礼物名称！');
+        showToast('请输入你买的狩猎物资名称！');
         return;
       }
 
@@ -286,13 +313,13 @@ createApp({
         const data = await res.json();
 
         if (!res.ok) {
-          showToast(data.error || '提交失败');
+          showToast(data.error || '纳品失败');
           return;
         }
 
-        playWinFanfare();
+        playMHFanfare();
         launchConfetti();
-        showToast(data.updated ? '✅ 礼物信息已更新！' : '🎉 礼物成功入池！静待群主封池开奖！');
+        showToast(data.updated ? '✅ 纳品物资已更新！' : '🎉 物资成功入库！静候大团长封池开炉！');
         showSubmitModal.value = false;
         fetchState();
       } catch (err) {
@@ -305,17 +332,17 @@ createApp({
       initAudio();
 
       if (!currentName.value.trim()) {
-        showToast('👉 请先输入你的昵称！');
+        showToast('👉 请先输入你的猎人昵称！');
         return;
       }
 
       if (config.value.status !== 'rolling') {
-        showToast('当前仍在礼物收集阶段，请等待房主封池开奖！');
+        showToast('集会所仍在纳品筹备中，请等待大团长封池！');
         return;
       }
 
       if (myPrize.value) {
-        showToast('你已经抽过礼物啦，每人限抽1次哦！');
+        showToast('每位猎人限领1份报酬，你已经领过啦！');
         return;
       }
 
@@ -336,13 +363,13 @@ createApp({
         });
         const data = await res.json();
 
-        // 2.2s arcade suspense
+        // 2.2s suspense
         setTimeout(() => {
           clearInterval(spinTimer);
           isSpinning.value = false;
 
           if (!res.ok) {
-            showToast(data.error || '抽奖失败');
+            showToast(data.error || '炼金失败');
             return;
           }
 
@@ -351,7 +378,7 @@ createApp({
           winningGift.value = won;
           myPrize.value = won;
 
-          playWinFanfare();
+          playMHFanfare();
           launchConfetti();
           showWinnerModal.value = true;
 
@@ -361,11 +388,10 @@ createApp({
       } catch (err) {
         clearInterval(spinTimer);
         isSpinning.value = false;
-        showToast('抽奖请求失败，请稍后重试');
+        showToast('请求超时，请稍后重试');
       }
     };
 
-    // Copy to clipboard
     const copyText = (text, tip = '已复制！') => {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(() => showToast(tip));
@@ -380,7 +406,7 @@ createApp({
       }
     };
 
-    // Poster Generation
+    // Generate Monster Hunter Quest Clear Certificate Poster
     const generatePoster = () => {
       const gift = myPrize.value || winningGift.value;
       if (!gift) return;
@@ -390,80 +416,110 @@ createApp({
       canvas.height = 1050;
       const ctx = canvas.getContext('2d');
 
+      // MH Tavern Parchment Gradient
       const grad = ctx.createLinearGradient(0, 0, 750, 1050);
-      grad.addColorStop(0, '#1b3826');
-      grad.addColorStop(0.5, '#0d1e14');
-      grad.addColorStop(1, '#050c08');
+      grad.addColorStop(0, '#2e1a0c');
+      grad.addColorStop(0.5, '#170d06');
+      grad.addColorStop(1, '#0a0502');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, 750, 1050);
 
+      // Bronze Hunter Guild Border
       ctx.strokeStyle = '#f59e0b';
       ctx.lineWidth = 8;
       ctx.strokeRect(30, 30, 690, 990);
 
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(42, 42, 666, 966);
+
+      // Top Header
       ctx.textAlign = 'center';
-      ctx.fillStyle = '#fde68a';
+      ctx.fillStyle = '#fbbf24';
       ctx.font = 'bold 36px sans-serif';
-      ctx.fillText('🎄 2026 圣诞礼物大抽奖 🎁', 375, 120);
+      ctx.fillText('🐾「呆猫集会所」周年群庆特别纳品 🍖', 375, 120);
 
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#fef3c7';
       ctx.font = '22px sans-serif';
-      ctx.fillText('群友自备心意 · 纯随机盲盒抽取！', 375, 165);
+      ctx.fillText('MONSTER HUNTER · 猎人公会特别嘉奖单', 375, 165);
 
-      ctx.fillStyle = '#fff9e6';
+      // Quest Parchment Card
+      ctx.fillStyle = '#fef3c7';
       ctx.beginPath();
-      ctx.roundRect(80, 220, 590, 520, 24);
+      ctx.roundRect(80, 220, 590, 520, 20);
       ctx.fill();
 
-      ctx.fillStyle = '#c41e3a';
+      // Quest Complete Banner
+      ctx.fillStyle = '#b91c1c';
       ctx.beginPath();
-      ctx.roundRect(100, 240, 550, 60, 14);
+      ctx.roundRect(100, 240, 550, 60, 12);
       ctx.fill();
 
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 26px sans-serif';
-      ctx.fillText(`🎉 恭喜欧皇【${currentName.value}】斩获圣诞好礼！`, 375, 280);
+      ctx.fillText(`🏆 QUEST COMPLETE! 苍蓝星【${currentName.value}】`, 375, 280);
 
-      ctx.font = '90px sans-serif';
-      ctx.fillText(gift.icon || '🎁', 375, 420);
+      // Big Gift Icon
+      ctx.font = '85px sans-serif';
+      ctx.fillText(gift.icon || '🍖', 375, 415);
 
+      // Gift Title
       ctx.fillStyle = '#1c1917';
       ctx.font = 'bold 32px sans-serif';
-      ctx.fillText(gift.name, 375, 500);
+      ctx.fillText(gift.name, 375, 495);
 
+      // Value
       ctx.fillStyle = '#b45309';
       ctx.font = 'bold 28px sans-serif';
-      ctx.fillText(`💰 礼物估值：${gift.value}`, 375, 560);
+      ctx.fillText(`💰 任务报酬估值：${gift.value}`, 375, 555);
 
-      ctx.fillStyle = '#64748b';
+      ctx.fillStyle = '#78350f';
       ctx.font = '20px sans-serif';
-      ctx.fillText(`由 @${gift.provider} 精心准备提供`, 375, 610);
+      ctx.fillText(`由集会所猎人 @${gift.provider} 纳品赞助`, 375, 605);
 
+      // Red Circle Quest Stamp
+      ctx.save();
+      ctx.translate(560, 630);
+      ctx.rotate(-15 * Math.PI / 180);
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(0, 0, 48, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = '#dc2626';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillText('CLEAR', 0, -6);
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText('公会认证', 0, 16);
+      ctx.restore();
+
+      // Divider
       ctx.strokeStyle = '#d97706';
       ctx.lineWidth = 1;
       ctx.setLineDash([8, 8]);
       ctx.beginPath();
-      ctx.moveTo(140, 650);
-      ctx.lineTo(610, 650);
+      ctx.moveTo(140, 645);
+      ctx.lineTo(480, 645);
       ctx.stroke();
       ctx.setLineDash([]);
 
       ctx.fillStyle = '#15803d';
       ctx.font = 'italic bold 22px sans-serif';
-      ctx.fillText('“ 冬日的第一份惊喜，已被我收入囊中！ ”', 375, 700);
+      ctx.fillText('“ 上手に焼けました～！愿指引明路的苍蓝星为你闪耀！ ”', 375, 695);
 
+      // Bottom QR
       if (qrCodeDataUrl.value) {
         const qrImg = new Image();
         qrImg.onload = () => {
           ctx.drawImage(qrImg, 100, 780, 180, 180);
           ctx.textAlign = 'left';
-          ctx.fillStyle = '#fde68a';
+          ctx.fillStyle = '#fbbf24';
           ctx.font = 'bold 28px sans-serif';
-          ctx.fillText('扫码进入圣诞抽奖池', 310, 840);
-          ctx.fillStyle = '#cbd5e1';
+          ctx.fillText('扫码进入呆猫集会所', 310, 840);
+          ctx.fillStyle = '#fde68a';
           ctx.font = '20px sans-serif';
-          ctx.fillText('预算50~70元 · 纯随机盲盒抽取', 310, 885);
-          ctx.fillText('快来带走属于你的冬日心意！', 310, 925);
+          ctx.fillText('群庆物资大抽奖 · 纯随机盲盒', 310, 885);
+          ctx.fillText('快来领取属于你的周年狩猎报酬！', 310, 925);
 
           posterDataUrl.value = canvas.toDataURL('image/png');
           showPosterModal.value = true;
@@ -478,12 +534,10 @@ createApp({
     let pollTimer = null;
 
     onMounted(() => {
-      const saved = localStorage.getItem('xmas_saved_name');
-      if (saved) {
-        currentName.value = saved;
-      }
+      const saved = localStorage.getItem('mh_saved_hunter_name');
+      if (saved) currentName.value = saved;
       fetchState();
-      initSnow();
+      initEmbers();
       pollTimer = setInterval(fetchState, 4000);
     });
 

@@ -1,12 +1,13 @@
-/* Christmas Gift Pool Lottery - Theme CSS */
+/* Monster Hunter "呆猫集会所" Group Celebration Theme CSS */
 :root {
-  --xmas-red: #c41e3a;
-  --xmas-darkred: #7f1d1d;
-  --xmas-green: #15803d;
-  --xmas-darkgreen: #052e16;
-  --xmas-gold: #f59e0b;
-  --xmas-lightgold: #fde68a;
-  --neon-gold: #fbbf24;
+  --mh-wood: #1e130a;
+  --mh-darkwood: #120904;
+  --mh-gold: #f59e0b;
+  --mh-brightgold: #fbbf24;
+  --mh-leather: #78350f;
+  --mh-red: #b91c1c;
+  --mh-dragon-green: #15803d;
+  --mh-ember: #ea580c;
 }
 
 * {
@@ -18,15 +19,15 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  background: radial-gradient(circle at 50% 15%, #1b3826 0%, #0d1e14 55%, #050c08 100%);
+  background: radial-gradient(circle at 50% 20%, #2e1a0c 0%, #170d06 60%, #090502 100%);
   color: #f8fafc;
   min-height: 100vh;
   overflow-x: hidden;
   position: relative;
-  padding-bottom: 70px;
+  padding-bottom: 60px;
 }
 
-/* Background Snow Canvas */
+/* Background Embers & Sparks Canvas */
 #snow-canvas {
   position: fixed;
   top: 0;
@@ -39,16 +40,16 @@ body {
 
 /* Top Marquee Live Broadcast Banner */
 .marquee-bar {
-  background: linear-gradient(90deg, #991b1b, #c41e3a, #991b1b);
-  border-bottom: 1px solid #f59e0b;
+  background: linear-gradient(90deg, #78350f, #b91c1c, #78350f);
+  border-bottom: 2px solid #f59e0b;
   padding: 8px 12px;
   font-size: 13px;
-  font-weight: 600;
-  color: #fff9e6;
+  font-weight: 700;
+  color: #fef3c7;
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
   position: relative;
   z-index: 40;
 }
@@ -69,7 +70,7 @@ body {
   100% { transform: translateX(-100%); }
 }
 
-/* Container */
+/* App Container */
 .app-container {
   max-width: 500px;
   margin: 0 auto;
@@ -85,40 +86,41 @@ body {
 }
 
 .hero-title {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 900;
-  color: #fff9e6;
-  text-shadow: 0 2px 10px rgba(196, 30, 58, 0.8), 0 0 20px rgba(245, 158, 11, 0.6);
+  color: #fffbeb;
+  text-shadow: 0 2px 12px rgba(185, 28, 28, 0.9), 0 0 25px rgba(245, 158, 11, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  line-height: 1.3;
 }
 
 .budget-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(196, 30, 58, 0.85);
+  background: rgba(120, 53, 15, 0.85);
   border: 1px solid #f59e0b;
   border-radius: 30px;
   padding: 5px 14px;
   font-size: 12px;
   font-weight: 700;
-  color: #fff9e6;
+  color: #fef3c7;
   margin-top: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
 
 /* Stat Chips */
 .stats-row {
   display: flex;
   justify-content: space-around;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.45);
   border-radius: 14px;
   padding: 10px;
   margin-bottom: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
 }
 
 .stat-item {
@@ -126,24 +128,24 @@ body {
 }
 
 .stat-num {
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 900;
   color: #fbbf24;
 }
 
 .stat-label {
   font-size: 11px;
-  color: #94a3b8;
+  color: #cbd5e1;
   margin-top: 2px;
 }
 
-/* ================= 🎰 SLOT MACHINE CASINO SECTION ================= */
+/* ================= 🎰 PALICO ALCHEMY / SLOT MACHINE ================= */
 .slot-machine-card {
-  background: linear-gradient(180deg, #1e3a29 0%, #0d2116 100%);
+  background: linear-gradient(180deg, #2a1608 0%, #150b04 100%);
   border: 3px solid #f59e0b;
   border-radius: 24px;
   padding: 20px 16px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), inset 0 2px 0 rgba(255, 255, 255, 0.2);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7), inset 0 2px 0 rgba(255, 255, 255, 0.15);
   margin-bottom: 24px;
   position: relative;
   overflow: hidden;
@@ -187,7 +189,7 @@ body {
 
 .user-input {
   width: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
   border: 2px solid rgba(245, 158, 11, 0.5);
   border-radius: 12px;
   padding: 12px 14px;
@@ -200,32 +202,7 @@ body {
 
 .user-input:focus {
   border-color: #fbbf24;
-  box-shadow: 0 0 12px rgba(251, 191, 36, 0.4);
-}
-
-.quick-members-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-.quick-chip {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #e2e8f0;
-  border-radius: 14px;
-  padding: 4px 10px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.quick-chip.selected {
-  background: #f59e0b;
-  color: #000;
-  font-weight: 700;
-  border-color: #f59e0b;
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.5);
 }
 
 /* Slot Screen Window */
@@ -239,11 +216,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 0 15px rgba(245, 158, 11, 0.3);
+  box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.9), 0 0 15px rgba(245, 158, 11, 0.4);
   margin-bottom: 16px;
 }
 
-/* Glass reflection shine on screen */
 .slot-screen::after {
   content: '';
   position: absolute;
@@ -251,7 +227,7 @@ body {
   left: 0;
   width: 100%;
   height: 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 100%);
   pointer-events: none;
 }
 
@@ -271,14 +247,14 @@ body {
 }
 
 .slot-item-icon {
-  font-size: 46px;
-  filter: drop-shadow(0 4px 10px rgba(245, 158, 11, 0.6));
+  font-size: 48px;
+  filter: drop-shadow(0 4px 12px rgba(245, 158, 11, 0.7));
 }
 
 .slot-item-name {
   font-size: 16px;
   font-weight: 800;
-  color: #fde68a;
+  color: #fef08a;
   margin-top: 4px;
 }
 
@@ -288,30 +264,28 @@ body {
   font-weight: 700;
 }
 
-/* Big Red Pull Lever & Roll Button */
+/* Big Button */
 .btn-pull-lever {
   width: 100%;
-  background: linear-gradient(135deg, #c41e3a 0%, #991b1b 100%);
+  background: linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%);
   border: 2px solid #fde68a;
   border-radius: 16px;
   padding: 16px 20px;
   font-size: 18px;
   font-weight: 900;
-  color: #fff9e6;
+  color: #fffbeb;
   cursor: pointer;
-  box-shadow: 0 8px 25px rgba(196, 30, 58, 0.6), inset 0 2px 0 rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 25px rgba(185, 28, 28, 0.7), inset 0 2px 0 rgba(255, 255, 255, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   transition: all 0.15s ease;
-  position: relative;
-  overflow: hidden;
 }
 
 .btn-pull-lever:active {
   transform: scale(0.97);
-  box-shadow: 0 3px 10px rgba(196, 30, 58, 0.8);
+  box-shadow: 0 3px 10px rgba(185, 28, 28, 0.8);
 }
 
 .btn-pull-lever:disabled {
@@ -322,14 +296,14 @@ body {
 
 /* Already Won Card */
 .my-prize-banner {
-  background: linear-gradient(135deg, #fff9e6 0%, #fef3c7 100%);
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
   color: #1c1917;
   border: 2px solid #f59e0b;
   border-radius: 18px;
   padding: 16px;
   margin-bottom: 20px;
   text-align: center;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
   animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
@@ -338,7 +312,7 @@ body {
   to { transform: scale(1); opacity: 1; }
 }
 
-/* ================= 🎁 PUBLIC GIFT POOL SECTION ================= */
+/* ================= 🎁 PUBLIC GIFT POOL ================= */
 .pool-section-header {
   display: flex;
   justify-content: space-between;
@@ -362,8 +336,8 @@ body {
 }
 
 .gift-card {
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(245, 158, 11, 0.25);
   border-radius: 16px;
   padding: 12px;
   position: relative;
@@ -371,9 +345,9 @@ body {
 }
 
 .gift-card.won {
-  opacity: 0.6;
+  opacity: 0.55;
   border-color: rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.25);
 }
 
 .gift-card-icon {
@@ -386,7 +360,7 @@ body {
   font-weight: 700;
   color: #fff;
   line-height: 1.3;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   min-height: 34px;
 }
 
@@ -421,14 +395,14 @@ body {
   border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
-/* ================= 🏆 WINNER MODAL ================= */
+/* ================= 🏆 WINNER POPUP ================= */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
@@ -438,7 +412,7 @@ body {
 }
 
 .winner-modal-card {
-  background: linear-gradient(135deg, #1e3a29 0%, #0d2116 100%);
+  background: linear-gradient(135deg, #2b1809 0%, #150b04 100%);
   border: 3px solid #fbbf24;
   border-radius: 24px;
   width: 100%;
@@ -446,20 +420,21 @@ body {
   padding: 26px 20px;
   text-align: center;
   position: relative;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
   animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .winner-badge {
   display: inline-block;
-  background: #c41e3a;
+  background: #b91c1c;
   color: #fff;
-  font-size: 12px;
-  font-weight: 800;
-  padding: 4px 14px;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 5px 16px;
   border-radius: 20px;
   margin-bottom: 12px;
   border: 1px solid #fbbf24;
+  letter-spacing: 1px;
 }
 
 .winner-gift-icon {
@@ -476,7 +451,7 @@ body {
 .winner-gift-title {
   font-size: 20px;
   font-weight: 900;
-  color: #fff9e6;
+  color: #fffbeb;
   margin-bottom: 6px;
 }
 
@@ -488,30 +463,17 @@ body {
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   color: #fff;
   border-radius: 12px;
   padding: 12px 16px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
   width: 100%;
   margin-top: 8px;
-}
-
-/* Footer Admin link */
-.footer-admin {
-  text-align: center;
-  margin-top: 30px;
-  font-size: 12px;
-  color: #64748b;
-}
-
-.footer-admin a {
-  color: #94a3b8;
-  text-decoration: none;
 }
 
 /* Toast */
@@ -522,13 +484,13 @@ body {
   transform: translateX(-50%);
   background: rgba(0, 0, 0, 0.9);
   border: 1px solid #fbbf24;
-  color: #fff9e6;
+  color: #fef08a;
   padding: 10px 20px;
   border-radius: 30px;
   font-size: 14px;
   font-weight: 700;
   z-index: 999;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
   animation: toastPop 0.3s ease;
 }
 
