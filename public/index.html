@@ -27,13 +27,12 @@
       <!-- Header -->
       <header class="hero-header">
         <h1 class="hero-title">
-          <span>🐾</span>
           <span>{{ config.title }}</span>
         </h1>
         <div class="budget-pill">
-          <span>💰 纳品物资预算指导：</span>
+          <span>💰 {{ config.budgetTip || '预算指导' }}：</span>
           <span style="color: #fbbf24; font-size: 14px;">{{ config.budget }}</span>
-          <span style="opacity: 0.9;">(猎人自备 · 纯随机抽取)</span>
+          <span style="opacity: 0.9;">(纯随机抽取 · 绝不抽自己)</span>
         </div>
       </header>
 
@@ -41,13 +40,13 @@
       <section v-if="config.status === 'collecting'" class="slot-machine-card" style="border-color: #f59e0b;">
         <div style="text-align: center; margin-bottom: 16px;">
           <div style="display: inline-block; background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fbbf24; border-radius: 20px; padding: 4px 14px; font-size: 12px; font-weight: 800; margin-bottom: 8px;">
-            🟡 阶段一：集会所纳品征集中
+            {{ config.phase1Badge || '🟡 阶段一：纳品征集中' }}
           </div>
           <h2 style="font-size: 20px; font-weight: 900; color: #fffbeb;">
-            已汇聚 <span style="color: #fbbf24; font-size: 26px;">{{ stats.totalGifts }}</span> 份猎人补给物资！
+            已汇聚 <span style="color: #fbbf24; font-size: 26px;">{{ stats.totalGifts }}</span> 份补给物资！
           </h2>
           <p style="font-size: 12px; color: #cbd5e1; margin-top: 4px;">
-            每位猎人上交一份 50~70 元物资，全员到齐后大团长封池开炉！
+            {{ config.phase1Sub || '每位朋友上交一份物资，全员到齐后一键封池开抽！' }}
           </p>
         </div>
 
@@ -83,8 +82,8 @@
         <!-- Big Button: Submit Gift -->
         <button v-else class="btn-pull-lever" style="background: linear-gradient(135deg, #b91c1c 0%, #78350f 100%);" @click="openSubmitModal">
           <span>📦</span>
-          <span>上交我的狩猎物资 (¥50~70)</span>
-          <span>🍖</span>
+          <span>{{ config.phase1Btn || '上交我的狩猎物资 (¥50~70)' }}</span>
+          <span>✨</span>
         </button>
       </section>
 
@@ -148,8 +147,8 @@
             @click="startRoll"
           >
             <span>🕹️</span>
-            <span>{{ isSpinning ? '猫猫炼金熔炉运转中...' : (stats.remainingGifts === 0 ? '集会所物资已被抢空' : '上手に焼けました！开摇！') }}</span>
-            <span>🍖</span>
+            <span>{{ isSpinning ? '猫猫炼金熔炉运转中...' : (stats.remainingGifts === 0 ? '物资已被全部领空' : (config.phase2Btn || '上手に焼けました！开摇！')) }}</span>
+            <span>✨</span>
           </button>
         </div>
       </section>
@@ -199,8 +198,7 @@
 
       <!-- Rules Hint -->
       <div style="background: rgba(0,0,0,0.4); border-radius: 14px; padding: 12px 14px; font-size: 12px; color: #cbd5e1; line-height: 1.6; margin-bottom: 20px;">
-        💡 <strong>猎人公会防假赛条例：</strong>
-        全员各自登记物资，到齐后封池。系统算法严格保证<strong>绝不会抽到自己带来的物资</strong>！100% 纯随机分发，人人有份！
+        {{ config.ruleText || '💡 规则条例：全员各自登记物资，到齐后封池。系统算法严格保证绝不会抽到自己带来的物资！100% 纯随机分发，人人有份！' }}
       </div>
     </div>
 
@@ -227,10 +225,10 @@
         </div>
 
         <div class="user-select-box">
-          <label class="user-select-label">挑选猎人专属图标：</label>
+          <label class="user-select-label">挑选专属图标：</label>
           <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
             <div 
-              v-for="item in iconList" 
+              v-for="item in (config.icons && config.icons.length ? config.icons : iconList)" 
               :key="item.ic"
               style="padding: 6px; border-radius: 10px; cursor: pointer; text-align: center; background: rgba(255,255,255,0.08); transition: transform 0.1s;"
               :style="{ background: submitForm.icon === item.ic ? '#f59e0b' : 'rgba(255,255,255,0.08)' }"
@@ -254,7 +252,7 @@
     <!-- ================= 🏆 WINNER POPUP MODAL ================= -->
     <div v-if="showWinnerModal" class="modal-overlay" @click.self="showWinnerModal = false">
       <div class="winner-modal-card">
-        <div class="winner-badge">🏆 QUEST COMPLETE 达成！</div>
+        <div class="winner-badge">{{ config.winnerBadge || '🏆 QUEST COMPLETE 达成！' }}</div>
         <div style="font-size: 15px; color: #fef08a;">恭喜苍蓝星【{{ currentName }}】斩获报酬</div>
         
         <div class="winner-gift-icon">{{ winningGift?.icon }}</div>
