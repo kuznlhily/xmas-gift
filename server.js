@@ -4,12 +4,12 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const QRCode = require('qrcode');
+const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data.json');
 
-// Get local IPv4 address
 function getLocalIP() {
   const interfaces = os.networkInterfaces();
   for (const name of Object.keys(interfaces)) {
@@ -23,8 +23,18 @@ function getLocalIP() {
 }
 
 app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json({ limit: '10mb' }));
+
+// Disable aggressive caching in WeChat WebView for HTML/JS/CSS
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html') || filePath.endsWith('.js') || filePath.endsWith('.css')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }
+}));
 
 // Presets Definition
 const THEME_PRESETS = {
@@ -105,65 +115,119 @@ const THEME_PRESETS = {
   }
 };
 
+// Start with a clean empty pool so no fake test items mix into real group activity
 const defaultData = {
   config: {
     ...THEME_PRESETS.mh,
     adminPin: '8888',
-    status: 'collecting' // 'collecting' | 'rolling' | 'ended'
+    status: 'collecting'
   },
-  gifts: [
-    {
-      id: 'g_sample_1',
-      name: '🍖 熟肉抱枕 & 猎人特酿生啤杯',
-      value: '¥68',
-      icon: '🍖',
-      provider: '集会所看板娘',
-      winner: null,
-      submittedAt: Date.now() - 3600000
-    },
-    {
-      id: 'g_sample_2',
-      name: '🐱 艾露猫猫爪肉垫防寒手套',
-      value: '¥59',
-      icon: '🐾',
-      provider: '大团长',
-      winner: null,
-      submittedAt: Date.now() - 1800000
-    }
-  ],
+  gifts: [],
   assignments: {},
   history: []
 };
 
-function loadData() {
+// ================= DATABASE PERSISTENCE LAYER =================
+let pgPool = null;
+let isPgConnected = false;
+
+if (process.env.DATABASE_URL) {
+  try {
+    const isLocal = process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1');
+    pgPool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: isLocal ? false : { rejectUnauthorized: false }
+    });
+    console.log('📦 检测到 DATABASE_URL，已配置 PostgreSQL 连接池');
+  } catch (err) {
+    console.error('⚠️ PostgreSQL 配置初始化失败:', err);
+  }
+}
+
+let db = JSON.parse(JSON.stringify(defaultData));
+
+// Sequential promise queue to prevent race conditions during concurrent DB writes
+let saveQueue = Promise.resolve();
+
+async function initDB() {
+  if (pgPool) {
+    try {
+      await pgPool.query(`
+        CREATE TABLE IF NOT EXISTS app_state (
+          id VARCHAR(50) PRIMARY KEY,
+          data JSONB NOT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      const res = await pgPool.query('SELECT data FROM app_state WHERE id = $1', ['default']);
+      if (res.rows.length > 0) {
+        db = res.rows[0].data;
+        db.config = { ...THEME_PRESETS.mh, ...db.config };
+        isPgConnected = true;
+        console.log('✅【云数据库已连接】成功从 PostgreSQL 读取持久化数据！物资总数:', db.gifts.length);
+        return;
+      } else {
+        await pgPool.query(
+          'INSERT INTO app_state (id, data) VALUES ($1, $2)',
+          ['default', JSON.stringify(defaultData)]
+        );
+        db = JSON.parse(JSON.stringify(defaultData));
+        isPgConnected = true;
+        console.log('✅【云数据库已初始化】已在 PostgreSQL 中创建初始记录！');
+        return;
+      }
+    } catch (err) {
+      console.error('⚠️ 连接 PostgreSQL 数据库出错，将回退到本地文件模式:', err.message);
+      isPgConnected = false;
+    }
+  }
+
   try {
     if (fs.existsSync(DATA_FILE)) {
       const content = fs.readFileSync(DATA_FILE, 'utf-8');
       const parsed = JSON.parse(content);
       if (parsed.gifts && parsed.config) {
-        // Ensure new copy fields exist
         parsed.config = { ...THEME_PRESETS.mh, ...parsed.config };
-        return parsed;
+        db = parsed;
+        console.log('📁【本地文件模式】从 data.json 读取数据，物资总数:', db.gifts.length);
+        return;
       }
     }
   } catch (err) {
     console.error('Error reading data.json:', err);
   }
-  saveData(defaultData);
-  return JSON.parse(JSON.stringify(defaultData));
+
+  db = JSON.parse(JSON.stringify(defaultData));
+  await saveData(db);
 }
 
 function saveData(data) {
-  try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
-  } catch (err) {
-    console.error('Error writing data.json:', err);
-  }
+  db = data;
+  // Queue writes sequentially so Postgres never overwrites newer state with older state
+  saveQueue = saveQueue.then(async () => {
+    if (pgPool && isPgConnected) {
+      try {
+        await pgPool.query(`
+          INSERT INTO app_state (id, data, updated_at)
+          VALUES ('default', $1, NOW())
+          ON CONFLICT (id) DO UPDATE SET data = $1, updated_at = NOW()
+        `, [JSON.stringify(data)]);
+      } catch (err) {
+        console.error('⚠️ 同步到 PostgreSQL 失败:', err.message);
+      }
+    }
+
+    try {
+      fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    } catch (err) {
+      console.error('Error writing data.json:', err);
+    }
+  }).catch(err => console.error('Save queue error:', err));
+
+  return saveQueue;
 }
 
-let db = loadData();
-
-// 1. Public API: Get Room State & Gift Pool
+// 1. Public API: Get Room State & Gift Pool (Sanitized! NEVER expose adminPin or assignments!)
 app.get('/api/public-state', async (req, res) => {
   const host = req.get('host');
   const protocol = req.headers['x-forwarded-proto'] === 'https' ? 'https' : (req.protocol || 'http');
@@ -178,22 +242,36 @@ app.get('/api/public-state', async (req, res) => {
   const remainingGifts = db.gifts.filter(g => !g.winner).length;
   const wonGifts = db.gifts.filter(g => g.winner).length;
 
+  // Strip sensitive adminPin before sending to frontend!
+  const { adminPin, ...safeConfig } = db.config;
+
+  // Registered hunters list (with whether they have already rolled)
+  const hunters = db.gifts.map(g => ({
+    name: g.provider,
+    hasRolled: db.gifts.some(item => item.winner && item.winner.name.toLowerCase() === g.provider.toLowerCase())
+  }));
+
   res.json({
-    config: db.config,
+    config: safeConfig,
     stats: {
       totalGifts,
       remainingGifts,
       wonGifts
     },
     gifts: db.gifts,
+    hunters,
     history: db.history.slice(-10).reverse(),
     shareUrl,
-    qrCodeDataUrl
+    qrCodeDataUrl,
+    dbStatus: {
+      isPostgres: isPgConnected,
+      mode: isPgConnected ? 'PostgreSQL 云数据库 (数据永久持久化)' : '本地文件模式 (未配置云数据库)'
+    }
   });
 });
 
 // 2. Member Submits their Gift
-app.post('/api/gift/submit', (req, res) => {
+app.post('/api/gift/submit', async (req, res) => {
   const { provider, name, value, icon } = req.body;
 
   if (db.config.status !== 'collecting') {
@@ -209,7 +287,11 @@ app.post('/api/gift/submit', (req, res) => {
 
   const cleanProvider = provider.trim();
   const cleanName = name.trim();
-  const cleanValue = (value && value.trim()) ? value.trim() : '¥60';
+  let cleanValue = (value && value.trim()) ? value.trim() : '¥60';
+  // Auto prefix ¥ if user just entered a number like "65"
+  if (/^\d+(\.\d+)?$/.test(cleanValue)) {
+    cleanValue = '¥' + cleanValue;
+  }
   const cleanIcon = icon || '🎁';
 
   const existingIndex = db.gifts.findIndex(g => g.provider.toLowerCase() === cleanProvider.toLowerCase());
@@ -218,7 +300,7 @@ app.post('/api/gift/submit', (req, res) => {
     db.gifts[existingIndex].value = cleanValue;
     db.gifts[existingIndex].icon = cleanIcon;
     db.gifts[existingIndex].submittedAt = Date.now();
-    saveData(db);
+    await saveData(db);
     return res.json({ success: true, updated: true, gift: db.gifts[existingIndex] });
   }
 
@@ -233,32 +315,42 @@ app.post('/api/gift/submit', (req, res) => {
   };
 
   db.gifts.push(newGift);
-  saveData(db);
+  await saveData(db);
 
   res.json({ success: true, updated: false, gift: newGift });
 });
 
-// 3. Roll / Draw
-app.post('/api/roll', (req, res) => {
+// 3. Roll / Draw (Strictly limited to participants who actually submitted a gift!)
+app.post('/api/roll', async (req, res) => {
   const { name } = req.body;
   if (!name || !name.trim()) {
     return res.status(400).json({ error: '请选择或输入你的昵称！' });
   }
   const cleanName = name.trim();
+  const lowerName = cleanName.toLowerCase();
 
   if (db.config.status !== 'rolling') {
     return res.status(400).json({ error: '活动仍在准备中，请等待管理员封池开奖！' });
   }
 
-  const alreadyWon = db.gifts.find(g => g.winner && g.winner.name.toLowerCase() === cleanName.toLowerCase());
+  // Check if user already won
+  const alreadyWon = db.gifts.find(g => g.winner && g.winner.name.toLowerCase() === lowerName);
   if (alreadyWon) {
     return res.status(400).json({
-      error: `你已经领过啦！你斩获的是：【${alreadyWon.name}】`,
+      error: `你已经抽过啦！你斩获的是：【${alreadyWon.name}】`,
       gift: alreadyWon
     });
   }
 
-  const assignedGiftId = db.assignments[cleanName.toLowerCase()];
+  // Verify user actually participated (submitted a gift) to prevent random typos or guests stealing gifts
+  const isParticipant = db.gifts.some(g => g.provider.toLowerCase() === lowerName);
+  if (!isParticipant) {
+    return res.status(403).json({
+      error: `未找到 "${cleanName}" 的登记记录！请核对名字是否与登记时一致，或直接点击下方名字标签选择。`
+    });
+  }
+
+  const assignedGiftId = db.assignments[lowerName];
   let pickedGift = null;
 
   if (assignedGiftId) {
@@ -266,7 +358,7 @@ app.post('/api/roll', (req, res) => {
   }
 
   if (!pickedGift) {
-    const available = db.gifts.filter(g => !g.winner && g.provider.toLowerCase() !== cleanName.toLowerCase());
+    const available = db.gifts.filter(g => !g.winner && g.provider.toLowerCase() !== lowerName);
     if (available.length > 0) {
       pickedGift = available[Math.floor(Math.random() * available.length)];
     } else {
@@ -278,13 +370,16 @@ app.post('/api/roll', (req, res) => {
     }
   }
 
+  // Preserve exact original casing of provider name
+  const originalProvider = db.gifts.find(g => g.provider.toLowerCase() === lowerName)?.provider || cleanName;
+
   pickedGift.winner = {
-    name: cleanName,
+    name: originalProvider,
     time: Date.now()
   };
 
   db.history.push({
-    name: cleanName,
+    name: originalProvider,
     giftName: pickedGift.name,
     icon: pickedGift.icon,
     value: pickedGift.value,
@@ -292,7 +387,7 @@ app.post('/api/roll', (req, res) => {
     time: Date.now()
   });
 
-  saveData(db);
+  await saveData(db);
 
   res.json({
     success: true,
@@ -343,7 +438,7 @@ function generateDerangementAssignments(gifts) {
 // ================= ADMIN APIS =================
 
 function checkAdmin(req, res, next) {
-  const pin = req.headers['x-admin-pin'] || req.body.adminPin;
+  const pin = req.headers['x-admin-pin'] || (req.body && req.body.adminPin) || req.query.adminPin;
   if (pin !== db.config.adminPin) {
     return res.status(403).json({ error: '密码错误，默认密码为 8888' });
   }
@@ -358,8 +453,7 @@ app.post('/api/admin/login', (req, res) => {
   res.json({ success: true });
 });
 
-// Admin: Update custom copy text & emojis
-app.post('/api/admin/update-settings', checkAdmin, (req, res) => {
+app.post('/api/admin/update-settings', checkAdmin, async (req, res) => {
   const {
     title, budget, budgetTip, phase1Badge, phase1Sub, phase1Btn,
     phase2Btn, winnerBadge, ruleText, icons, newAdminPin
@@ -386,12 +480,12 @@ app.post('/api/admin/update-settings', checkAdmin, (req, res) => {
     db.config.adminPin = newAdminPin.trim();
   }
 
-  saveData(db);
-  res.json({ success: true, config: db.config });
+  await saveData(db);
+  const { adminPin, ...safeConfig } = db.config;
+  res.json({ success: true, config: safeConfig });
 });
 
-// Admin: Switch theme presets
-app.post('/api/admin/preset-theme', checkAdmin, (req, res) => {
+app.post('/api/admin/preset-theme', checkAdmin, async (req, res) => {
   const { themeKey } = req.body;
   const target = THEME_PRESETS[themeKey];
   if (!target) {
@@ -403,12 +497,12 @@ app.post('/api/admin/preset-theme', checkAdmin, (req, res) => {
     ...target
   };
 
-  saveData(db);
-  res.json({ success: true, config: db.config });
+  await saveData(db);
+  const { adminPin, ...safeConfig } = db.config;
+  res.json({ success: true, config: safeConfig });
 });
 
-// Admin: Lock pool and start rolling
-app.post('/api/admin/lock-and-match', checkAdmin, (req, res) => {
+app.post('/api/admin/lock-and-match', checkAdmin, async (req, res) => {
   if (db.gifts.length < 2) {
     return res.status(400).json({ error: '至少需要 2 份物资才能封池开奖哦！' });
   }
@@ -417,37 +511,51 @@ app.post('/api/admin/lock-and-match', checkAdmin, (req, res) => {
   db.config.status = 'rolling';
   db.gifts.forEach(g => { g.winner = null; });
   db.history = [];
-  saveData(db);
+  await saveData(db);
 
   res.json({ success: true, count: db.gifts.length });
 });
 
-// Admin: Reopen collection
-app.post('/api/admin/reopen-collection', checkAdmin, (req, res) => {
+app.post('/api/admin/reopen-collection', checkAdmin, async (req, res) => {
   db.config.status = 'collecting';
   db.assignments = {};
   db.gifts.forEach(g => { g.winner = null; });
   db.history = [];
-  saveData(db);
+  await saveData(db);
   res.json({ success: true, message: '已重新开启纳品/收集阶段！' });
 });
 
-// Admin: Delete a gift
-app.post('/api/admin/gift/delete', checkAdmin, (req, res) => {
+app.post('/api/admin/gift/delete', checkAdmin, async (req, res) => {
   const { id } = req.body;
   db.gifts = db.gifts.filter(g => g.id !== id);
-  saveData(db);
+  await saveData(db);
   res.json({ success: true, gifts: db.gifts });
 });
 
-// Admin: Reset everything
-app.post('/api/admin/clear-all', checkAdmin, (req, res) => {
+app.post('/api/admin/clear-all', checkAdmin, async (req, res) => {
   db.gifts = [];
   db.assignments = {};
   db.history = [];
   db.config.status = 'collecting';
-  saveData(db);
+  await saveData(db);
   res.json({ success: true, message: '已清空补给池，可重新开始！' });
+});
+
+app.get('/api/admin/export-backup', checkAdmin, (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Disposition', `attachment; filename=mh_gift_backup_${Date.now()}.json`);
+  res.send(JSON.stringify(db, null, 2));
+});
+
+app.post('/api/admin/import-restore', checkAdmin, async (req, res) => {
+  const { backupData } = req.body;
+  if (!backupData || !backupData.gifts || !backupData.config) {
+    return res.status(400).json({ error: '导入的备份数据格式不正确！' });
+  }
+
+  db = backupData;
+  await saveData(db);
+  res.json({ success: true, message: `成功恢复数据！当前包含 ${db.gifts.length} 份物资。` });
 });
 
 // Admin route (Secret /sillydog)
@@ -459,13 +567,18 @@ app.get('/admin', (req, res) => {
   res.status(404).send('Not Found');
 });
 
-// Start server
-app.listen(PORT, '0.0.0.0', () => {
-  const localIP = getLocalIP();
-  console.log(`====================================================`);
-  console.log(`🐾「呆猫集会所」群庆 · 猎人补给大抽奖启动！`);
-  console.log(`📱 玩家主页 (发微信群): http://${localIP}:${PORT}`);
-  console.log(`👑 管理员后台: http://${localIP}:${PORT}/sillydog`);
-  console.log(`🔑 房主密码: ${db.config.adminPin}`);
-  console.log(`====================================================`);
+// Start server after initializing DB
+initDB().then(() => {
+  app.listen(PORT, '0.0.0.0', () => {
+    const localIP = getLocalIP();
+    console.log(`====================================================`);
+    console.log(`🐾「呆猫集会所」群庆 · 猎人补给大抽奖启动！`);
+    console.log(`💾 数据库状态: ${isPgConnected ? '🟢 PostgreSQL 云数据库已连通' : '🟡 本地文件模式 (建议配置 DATABASE_URL)'}`);
+    console.log(`📱 玩家主页 (发微信群): http://${localIP}:${PORT}`);
+    console.log(`👑 管理员后台: http://${localIP}:${PORT}/sillydog`);
+    console.log(`🔑 房主密码: ${db.config.adminPin}`);
+    console.log(`====================================================`);
+  });
+}).catch(err => {
+  console.error('Fatal initialization error:', err);
 });

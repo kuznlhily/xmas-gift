@@ -36,6 +36,18 @@
         </div>
       </header>
 
+      <!-- Cold Start / Loading Indicator -->
+      <div v-if="isInitialLoading" class="slot-machine-card" style="text-align: center; padding: 36px 20px;">
+        <div style="font-size: 46px; margin-bottom: 10px; animation: bounce 1s infinite alternate;">🐾</div>
+        <div style="font-size: 16px; font-weight: 800; color: #fbbf24; margin-bottom: 6px;">
+          呆猫正在生火准备集会所...
+        </div>
+        <p style="font-size: 12px; color: #cbd5e1; line-height: 1.5;">
+          正在连接集会所云端服务器，首次唤醒约需 15~30 秒，请稍候片刻哦 🍖
+        </p>
+      </div>
+
+      <template v-else>
       <!-- PHASE 1: COLLECTING (集会所猎人纳品阶段) -->
       <section v-if="config.status === 'collecting'" class="slot-machine-card" style="border-color: #f59e0b;">
         <div style="text-align: center; margin-bottom: 16px;">
@@ -120,15 +132,32 @@
         <div v-else>
           <!-- Select Name -->
           <div class="user-select-box">
-            <label class="user-select-label">👤 请输入你的猎人昵称：</label>
+            <label class="user-select-label">👤 请点击选择你的猎人昵称：</label>
             <input 
               v-model="currentName" 
               type="text" 
               class="user-input" 
-              placeholder="输入你的猎人昵称开启炼金"
+              placeholder="点击下方标签选名字，或手动输入"
               @input="onNameChange"
               maxlength="15"
             >
+            <!-- Clickable Registered Hunters List -->
+            <div v-if="hunters.length > 0" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
+              <span 
+                v-for="h in hunters" 
+                :key="h.name"
+                @click="selectHunter(h.name)"
+                style="padding: 4px 10px; border-radius: 14px; font-size: 12px; cursor: pointer; border: 1px solid rgba(245, 158, 11, 0.35); transition: all 0.15s;"
+                :style="{
+                  background: currentName.trim().toLowerCase() === h.name.toLowerCase() ? '#f59e0b' : 'rgba(255,255,255,0.08)',
+                  color: currentName.trim().toLowerCase() === h.name.toLowerCase() ? '#000' : (h.hasRolled ? '#94a3b8' : '#fde68a'),
+                  fontWeight: currentName.trim().toLowerCase() === h.name.toLowerCase() ? '800' : '600',
+                  opacity: h.hasRolled ? 0.65 : 1
+                }"
+              >
+                {{ h.name }} {{ h.hasRolled ? '✅' : '' }}
+              </span>
+            </div>
           </div>
 
           <!-- Slot Machine Screen -->
@@ -200,6 +229,7 @@
       <div style="background: rgba(0,0,0,0.4); border-radius: 14px; padding: 12px 14px; font-size: 12px; color: #cbd5e1; line-height: 1.6; margin-bottom: 20px;">
         {{ config.ruleText || '💡 规则条例：全员各自登记物资，到齐后封池。系统算法严格保证绝不会抽到自己带来的物资！100% 纯随机分发，人人有份！' }}
       </div>
+      </template>
     </div>
 
     <!-- ================= 🎁 SUBMIT GIFT MODAL ================= -->

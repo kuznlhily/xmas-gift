@@ -12,7 +12,9 @@ createApp({
     });
     const stats = ref({ totalGifts: 0, remainingGifts: 0, wonGifts: 0 });
     const gifts = ref([]);
+    const hunters = ref([]);
     const history = ref([]);
+    const isInitialLoading = ref(true);
     const shareUrl = ref('');
     const qrCodeDataUrl = ref('');
 
@@ -68,11 +70,25 @@ createApp({
     // Audio Synthesizer (Monster Hunter SFX)
     let audioCtx = null;
     const initAudio = () => {
-      if (!audioCtx) {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (AudioContext) audioCtx = new AudioContext();
-      }
-      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      try {
+        if (!audioCtx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) audioCtx = new AudioContext();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        // Play a tiny silent pulse synchronously on tap to unlock iOS Safari/WeChat audio
+        if (audioCtx) {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(0);
+          osc.stop(audioCtx.currentTime + 0.01);
+        }
+      } catch (e) {}
     };
 
     const playClick = () => {
@@ -245,18 +261,27 @@ createApp({
     const fetchState = async () => {
       try {
         const res = await fetch('/api/public-state');
+        if (!res.ok) return;
         const data = await res.json();
         config.value = data.config;
         stats.value = data.stats;
         gifts.value = data.gifts;
+        hunters.value = data.hunters || [];
         history.value = data.history || [];
         shareUrl.value = window.location.origin || data.shareUrl;
         qrCodeDataUrl.value = data.qrCodeDataUrl || '';
+        isInitialLoading.value = false;
 
         updateUserStatus();
       } catch (err) {
         console.error('Fetch error:', err);
       }
+    };
+
+    const selectHunter = (name) => {
+      currentName.value = name;
+      localStorage.setItem('mh_saved_hunter_name', name);
+      updateUserStatus();
     };
 
     const updateUserStatus = () => {
@@ -346,6 +371,10 @@ createApp({
         return;
       }
 
+      if (!confirm(`确认你是【${currentName.value.trim()}】本人吗？\n点击确定即可开炉抽取，机会只有1次哦！`)) {
+        return;
+      }
+
       isSpinning.value = true;
 
       // Fast ticker shuffle
@@ -363,15 +392,18 @@ createApp({
         });
         const data = await res.json();
 
+        if (!res.ok) {
+          clearInterval(spinTimer);
+          isSpinning.value = false;
+          displaySlotItem.value = { icon: '🍖', name: '准备炼金中...', value: '¥50~70' };
+          showToast(data.error || '抽取失败', 3500);
+          return;
+        }
+
         // 2.2s suspense
         setTimeout(() => {
           clearInterval(spinTimer);
           isSpinning.value = false;
-
-          if (!res.ok) {
-            showToast(data.error || '炼金失败');
-            return;
-          }
 
           const won = data.gift;
           displaySlotItem.value = won;
@@ -549,7 +581,9 @@ createApp({
       config,
       stats,
       gifts,
+      hunters,
       history,
+      isInitialLoading,
       shareUrl,
       qrCodeDataUrl,
       currentName,
@@ -568,6 +602,7 @@ createApp({
       isMuted,
       toast,
       onNameChange,
+      selectHunter,
       openSubmitModal,
       submitMyGift,
       startRoll,
