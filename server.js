@@ -245,9 +245,16 @@ app.get('/api/public-state', async (req, res) => {
   // Strip sensitive adminPin before sending to frontend!
   const { adminPin, ...safeConfig } = db.config;
 
+  // Strip personal verification PINs from public gifts list!
+  const safeGifts = db.gifts.map(({ pin, ...rest }) => ({
+    ...rest,
+    hasPin: Boolean(pin)
+  }));
+
   // Registered hunters list (with whether they have already rolled)
   const hunters = db.gifts.map(g => ({
     name: g.provider,
+    hasPin: Boolean(g.pin),
     hasRolled: db.gifts.some(item => item.winner && item.winner.name.toLowerCase() === g.provider.toLowerCase())
   }));
 
@@ -258,7 +265,7 @@ app.get('/api/public-state', async (req, res) => {
       remainingGifts,
       wonGifts
     },
-    gifts: db.gifts,
+    gifts: safeGifts,
     hunters,
     history: db.history.slice(-10).reverse(),
     shareUrl,
@@ -272,7 +279,7 @@ app.get('/api/public-state', async (req, res) => {
 
 // 2. Member Submits their Gift
 app.post('/api/gift/submit', async (req, res) => {
-  const { provider, name, value, icon } = req.body;
+  const { provider, name, value, icon, pin } = req.body;
 
   if (db.config.status !== 'collecting') {
     return res.status(400).json({ error: '当前补给池已封存开奖，暂时无法添加新物资哦！' });
@@ -284,9 +291,13 @@ app.post('/api/gift/submit', async (req, res) => {
   if (!name || !name.trim()) {
     return res.status(400).json({ error: '请输入你买的物资/礼物名称' });
   }
+  if (!pin || pin.trim().length < 4) {
+    return res.status(400).json({ error: '请设置至少4位个人暗号（推荐填手机尾号4位，防别人冒名顶替！）' });
+  }
 
   const cleanProvider = provider.trim();
   const cleanName = name.trim();
+  const cleanPin = pin.trim();
   let cleanValue = (value && value.trim()) ? value.trim() : '¥60';
   // Auto prefix ¥ if user just entered a number like "65"
   if (/^\d+(\.\d+)?$/.test(cleanValue)) {
@@ -296,12 +307,21 @@ app.post('/api/gift/submit', async (req, res) => {
 
   const existingIndex = db.gifts.findIndex(g => g.provider.toLowerCase() === cleanProvider.toLowerCase());
   if (existingIndex >= 0) {
-    db.gifts[existingIndex].name = cleanName;
-    db.gifts[existingIndex].value = cleanValue;
-    db.gifts[existingIndex].icon = cleanIcon;
-    db.gifts[existingIndex].submittedAt = Date.now();
+    const existingGift = db.gifts[existingIndex];
+    // Prevent overwriting someone else's gift unless PIN matches
+    if (existingGift.pin && existingGift.pin !== cleanPin) {
+      return res.status(403).json({
+        error: `昵称 "${cleanProvider}" 已被占用！如果是你本人修改，请填对原暗号；如果重名请加个后缀区分~`
+      });
+    }
+    existingGift.name = cleanName;
+    existingGift.value = cleanValue;
+    existingGift.icon = cleanIcon;
+    existingGift.pin = cleanPin;
+    existingGift.submittedAt = Date.now();
     await saveData(db);
-    return res.json({ success: true, updated: true, gift: db.gifts[existingIndex] });
+    const { pin: _p, ...safeGift } = existingGift;
+    return res.json({ success: true, updated: true, gift: safeGift });
   }
 
   const newGift = {
@@ -310,6 +330,7 @@ app.post('/api/gift/submit', async (req, res) => {
     value: cleanValue,
     icon: cleanIcon,
     provider: cleanProvider,
+    pin: cleanPin,
     winner: null,
     submittedAt: Date.now()
   };
@@ -317,12 +338,13 @@ app.post('/api/gift/submit', async (req, res) => {
   db.gifts.push(newGift);
   await saveData(db);
 
-  res.json({ success: true, updated: false, gift: newGift });
+  const { pin: _p, ...safeNewGift } = newGift;
+  res.json({ success: true, updated: false, gift: safeNewGift });
 });
 
-// 3. Roll / Draw (Strictly limited to participants who actually submitted a gift!)
+// 3. Roll / Draw (Strictly requires both submitted gift AND matching personal PIN!)
 app.post('/api/roll', async (req, res) => {
-  const { name } = req.body;
+  const { name, pin } = req.body;
   if (!name || !name.trim()) {
     return res.status(400).json({ error: '请选择或输入你的昵称！' });
   }
@@ -333,20 +355,33 @@ app.post('/api/roll', async (req, res) => {
     return res.status(400).json({ error: '活动仍在准备中，请等待管理员封池开奖！' });
   }
 
-  // Check if user already won
-  const alreadyWon = db.gifts.find(g => g.winner && g.winner.name.toLowerCase() === lowerName);
-  if (alreadyWon) {
-    return res.status(400).json({
-      error: `你已经抽过啦！你斩获的是：【${alreadyWon.name}】`,
-      gift: alreadyWon
+  // Verify user actually participated (submitted a gift)
+  const mySubmittedGift = db.gifts.find(g => g.provider.toLowerCase() === lowerName);
+  if (!mySubmittedGift) {
+    return res.status(403).json({
+      error: `只有提交过礼物的人才能抽奖！未找到 "${cleanName}" 的登记记录。`
     });
   }
 
-  // Verify user actually participated (submitted a gift) to prevent random typos or guests stealing gifts
-  const isParticipant = db.gifts.some(g => g.provider.toLowerCase() === lowerName);
-  if (!isParticipant) {
+  // Verify personal PIN to prevent someone else from stealing this user's roll!
+  if (!mySubmittedGift.pin) {
     return res.status(403).json({
-      error: `未找到 "${cleanName}" 的登记记录！请核对名字是否与登记时一致，或直接点击下方名字标签选择。`
+      error: `你的昵称尚未设置验证暗号，请联系管理员在后台为你设置暗号后再抽！`
+    });
+  }
+  if (!pin || mySubmittedGift.pin !== pin.trim()) {
+    return res.status(403).json({
+      error: `个人验证暗号不正确！请输入你登记礼物时设置的暗号，防止冒名顶替~`
+    });
+  }
+
+  // Check if user already won
+  const alreadyWon = db.gifts.find(g => g.winner && g.winner.name.toLowerCase() === lowerName);
+  if (alreadyWon) {
+    const { pin: _p, ...safeAlreadyWon } = alreadyWon;
+    return res.status(400).json({
+      error: `你已经抽过啦！你斩获的是：【${alreadyWon.name}】`,
+      gift: safeAlreadyWon
     });
   }
 
@@ -371,7 +406,7 @@ app.post('/api/roll', async (req, res) => {
   }
 
   // Preserve exact original casing of provider name
-  const originalProvider = db.gifts.find(g => g.provider.toLowerCase() === lowerName)?.provider || cleanName;
+  const originalProvider = mySubmittedGift.provider;
 
   pickedGift.winner = {
     name: originalProvider,
@@ -389,9 +424,10 @@ app.post('/api/roll', async (req, res) => {
 
   await saveData(db);
 
+  const { pin: _p, ...safePickedGift } = pickedGift;
   res.json({
     success: true,
-    gift: pickedGift
+    gift: safePickedGift
   });
 });
 
@@ -500,6 +536,45 @@ app.post('/api/admin/preset-theme', checkAdmin, async (req, res) => {
   await saveData(db);
   const { adminPin, ...safeConfig } = db.config;
   res.json({ success: true, config: safeConfig });
+});
+
+// Admin: Get full state including personal PINs for support/management
+app.post('/api/admin/state', checkAdmin, (req, res) => {
+  const { adminPin, ...safeConfig } = db.config;
+  res.json({
+    config: safeConfig,
+    gifts: db.gifts,
+    dbStatus: {
+      isPostgres: isPgConnected,
+      mode: isPgConnected ? 'PostgreSQL 云数据库 (数据永久持久化)' : '本地文件模式 (未配置云数据库)'
+    }
+  });
+});
+
+// Admin: Set or update a participant's verification PIN
+app.post('/api/admin/gift/set-pin', checkAdmin, async (req, res) => {
+  const { id, pin } = req.body;
+  const gift = db.gifts.find(g => g.id === id);
+  if (!gift) return res.status(404).json({ error: '未找到该礼物记录' });
+  if (!pin || pin.trim().length < 4) {
+    return res.status(400).json({ error: '暗号长度至少为4位' });
+  }
+  gift.pin = pin.trim();
+  await saveData(db);
+  res.json({ success: true, gift });
+});
+
+// Admin: Auto-generate 4-digit random PINs for any legacy gifts without a PIN
+app.post('/api/admin/gift/auto-pins', checkAdmin, async (req, res) => {
+  let updatedCount = 0;
+  db.gifts.forEach(g => {
+    if (!g.pin) {
+      g.pin = Math.floor(1000 + Math.random() * 9000).toString();
+      updatedCount++;
+    }
+  });
+  if (updatedCount > 0) await saveData(db);
+  res.json({ success: true, updatedCount, gifts: db.gifts });
 });
 
 app.post('/api/admin/lock-and-match', checkAdmin, async (req, res) => {

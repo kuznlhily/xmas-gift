@@ -160,6 +160,18 @@
             </div>
           </div>
 
+          <!-- Personal PIN Verification -->
+          <div class="user-select-box">
+            <label class="user-select-label">🔐 个人领奖暗号 *（防他人冒充你的名字抽奖）</label>
+            <input 
+              v-model="currentPin" 
+              type="password" 
+              class="user-input" 
+              placeholder="输入你登记时设的暗号（如手机尾号4位）"
+              maxlength="12"
+            >
+          </div>
+
           <!-- Slot Machine Screen -->
           <div class="slot-screen">
             <div class="slot-item-display" :class="{ spinning: isSpinning }">
@@ -240,8 +252,16 @@
         </h3>
 
         <div class="user-select-box">
-          <label class="user-select-label">猎人昵称 *</label>
-          <input v-model="currentName" type="text" class="user-input" placeholder="输入你的名字（方便大家认出你）" maxlength="15">
+          <label class="user-select-label">你的昵称 *</label>
+          <input v-model="currentName" type="text" class="user-input" placeholder="输入你的昵称（方便大家认出你）" maxlength="15">
+        </div>
+
+        <div class="user-select-box">
+          <label class="user-select-label">设置个人暗号 * (4位以上，推荐填手机尾号4位)</label>
+          <input v-model="currentPin" type="text" class="user-input" placeholder="如：8899（抽奖需核对，防止别人冒领！）" maxlength="12">
+          <div style="font-size: 11px; color: #fbbf24; margin-top: 4px;">
+            🔒 记住这个暗号！开启抽奖后需凭此暗号核验本人身份~
+          </div>
         </div>
 
         <div class="user-select-box">

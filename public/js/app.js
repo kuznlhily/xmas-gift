@@ -20,6 +20,7 @@ createApp({
 
     // User identification
     const currentName = ref('');
+    const currentPin = ref('');
     const mySubmittedGift = ref(null);
     const myPrize = ref(null);
 
@@ -279,8 +280,15 @@ createApp({
     };
 
     const selectHunter = (name) => {
+      const savedName = localStorage.getItem('mh_saved_hunter_name') || '';
+      const savedPin = localStorage.getItem('mh_saved_hunter_pin') || '';
       currentName.value = name;
-      localStorage.setItem('mh_saved_hunter_name', name);
+      // Only auto-fill saved PIN if they select the same name they registered with on this phone
+      if (name.trim().toLowerCase() === savedName.trim().toLowerCase()) {
+        currentPin.value = savedPin;
+      } else {
+        currentPin.value = '';
+      }
       updateUserStatus();
     };
 
@@ -316,11 +324,15 @@ createApp({
     const submitMyGift = async () => {
       initAudio();
       if (!currentName.value.trim()) {
-        showToast('请先输入你的猎人昵称！');
+        showToast('请先输入你的昵称！');
         return;
       }
       if (!submitForm.value.name.trim()) {
-        showToast('请输入你买的狩猎物资名称！');
+        showToast('请输入你买的物资名称！');
+        return;
+      }
+      if (!currentPin.value.trim() || currentPin.value.trim().length < 4) {
+        showToast('请设置至少4位个人暗号（推荐填手机尾号4位），防别人冒领！', 3000);
         return;
       }
 
@@ -332,19 +344,24 @@ createApp({
             provider: currentName.value.trim(),
             name: submitForm.value.name.trim(),
             value: submitForm.value.price.trim(),
-            icon: submitForm.value.icon
+            icon: submitForm.value.icon,
+            pin: currentPin.value.trim()
           })
         });
         const data = await res.json();
 
         if (!res.ok) {
-          showToast(data.error || '纳品失败');
+          showToast(data.error || '纳品失败', 3500);
           return;
         }
 
+        // Save name and pin locally so same phone auto-fills during roll!
+        localStorage.setItem('mh_saved_hunter_name', currentName.value.trim());
+        localStorage.setItem('mh_saved_hunter_pin', currentPin.value.trim());
+
         playMHFanfare();
         launchConfetti();
-        showToast(data.updated ? '✅ 纳品物资已更新！' : '🎉 物资成功入库！静候大团长封池开炉！');
+        showToast(data.updated ? '✅ 纳品物资已更新！' : '🎉 物资成功入库！记住你的暗号，静候封池开抽！');
         showSubmitModal.value = false;
         fetchState();
       } catch (err) {
@@ -357,7 +374,7 @@ createApp({
       initAudio();
 
       if (!currentName.value.trim()) {
-        showToast('👉 请先输入你的猎人昵称！');
+        showToast('👉 请先输入或点击选择你的昵称！');
         return;
       }
 
@@ -367,11 +384,12 @@ createApp({
       }
 
       if (myPrize.value) {
-        showToast('每位猎人限领1份报酬，你已经领过啦！');
+        showToast('每人限抽1次，你已经领过啦！');
         return;
       }
 
-      if (!confirm(`确认你是【${currentName.value.trim()}】本人吗？\n点击确定即可开炉抽取，机会只有1次哦！`)) {
+      if (!currentPin.value.trim()) {
+        showToast('🔐 请输入你登记时设置的个人暗号（防别人冒名抽奖）！', 3000);
         return;
       }
 
@@ -388,7 +406,10 @@ createApp({
         const res = await fetch('/api/roll', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: currentName.value.trim() })
+          body: JSON.stringify({
+            name: currentName.value.trim(),
+            pin: currentPin.value.trim()
+          })
         });
         const data = await res.json();
 
@@ -567,7 +588,9 @@ createApp({
 
     onMounted(() => {
       const saved = localStorage.getItem('mh_saved_hunter_name');
+      const savedPin = localStorage.getItem('mh_saved_hunter_pin');
       if (saved) currentName.value = saved;
+      if (savedPin) currentPin.value = savedPin;
       fetchState();
       initEmbers();
       pollTimer = setInterval(fetchState, 4000);
@@ -587,6 +610,7 @@ createApp({
       shareUrl,
       qrCodeDataUrl,
       currentName,
+      currentPin,
       mySubmittedGift,
       myPrize,
       showSubmitModal,
